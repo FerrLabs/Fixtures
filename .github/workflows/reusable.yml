@@ -15,7 +15,7 @@ jobs:
       - name: Checkout test fixtures
         uses: actions/checkout@v4
         with:
-          repository: FerrFlow-Org/Tests
+          repository: FerrFlow-Org/Fixtures
           path: tests
 
       - name: Install Rust
