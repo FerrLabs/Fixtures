@@ -1,0 +1,25 @@
+name: New test fixture
+description: Propose a new integration test scenario
+labels: ["fixture"]
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Scenario
+      description: What behavior should this fixture test?
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup
+      description: Describe the repo structure, packages, commits, and tags
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output
+      description: What should `ferrflow check` output for this scenario?
+    validations:
+      required: true
