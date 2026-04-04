@@ -2,6 +2,10 @@
 set -euo pipefail
 
 FERRFLOW="${FERRFLOW_BIN:-ferrflow}"
+# Resolve to absolute path if relative
+if [[ "$FERRFLOW" == ./* || "$FERRFLOW" == ../* ]]; then
+    FERRFLOW="$(cd "$(dirname "$FERRFLOW")" && pwd)/$(basename "$FERRFLOW")"
+fi
 GEN_DIR="${1:-${GEN_DIR:-fixtures/generated}}"
 PASSED=0
 FAILED=0
