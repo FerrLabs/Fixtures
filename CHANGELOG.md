@@ -4,6 +4,12 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.0] - 2026-04-04
+
+### Features
+
+- feat: migrate fixture definitions from TOML to JSON (#24)
+
 ## [0.3.0] - 2026-04-04
 
 ### Features
