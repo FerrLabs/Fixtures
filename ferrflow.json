@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ferrflow.com/schema/ferrflow.json",
+  "workspace": {
+    "branch": "main",
+    "releaseCommitMode": "commit",
+    "floatingTags": ["major"]
+  },
+  "package": [
+    {
+      "name": "fixtures",
+      "path": ".",
+      "versioned_files": [
+        { "path": "generator/Cargo.toml", "format": "cargo" }
+      ],
+      "changelog": "CHANGELOG.md"
+    }
+  ]
+}

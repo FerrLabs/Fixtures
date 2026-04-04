@@ -73,6 +73,60 @@ check_not_contains = ["Nothing to release"]
 packages_released = 2
 ```
 
+### Advanced definition features
+
+#### Tags at arbitrary commits
+
+Place tags at any point in the commit history using `[[tags]]`:
+
+```toml
+[[tags]]
+name = "v1.0.0"
+at_commit = -1  # -1 = initial setup commit, 0+ = index into [[commits]]
+
+[[tags]]
+name = "v1.1.0"
+at_commit = 2  # after the third commit
+```
+
+The old-style `tag` field on `[[packages]]` still works for tags on the initial commit.
+
+#### Config format selection
+
+Choose the config file format and name:
+
+```toml
+[config]
+format = "toml"             # "json" (default), "toml", "json5"
+filename = ".ferrflow.toml"  # optional, auto-derived from format if omitted
+content = '''
+...
+'''
+```
+
+#### Hook scripts
+
+Write executable hook scripts into the generated repo:
+
+```toml
+[[hooks]]
+path = "hooks/pre-bump.sh"
+content = '''#!/usr/bin/env bash
+echo "running pre-bump"
+'''
+```
+
+#### Merge commits
+
+Create merge commits to test non-linear history handling:
+
+```toml
+[[commits]]
+message = "feat: merged feature"
+files = ["src/feature.rs"]
+merge = true
+```
+
 ## Running locally
 
 ```bash
