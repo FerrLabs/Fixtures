@@ -82,11 +82,11 @@ struct ExpectDef {
 }
 
 fn main() -> Result<()> {
-    let defs_dir = PathBuf::from("fixtures/definitions");
-    let gen_dir = PathBuf::from("fixtures/generated");
+    let args: Vec<String> = std::env::args().collect();
+    let (defs_dir, gen_dir) = parse_args(&args)?;
 
     if !defs_dir.exists() {
-        anyhow::bail!("fixtures/definitions/ not found. Run from the repo root.");
+        anyhow::bail!("{} not found.", defs_dir.display());
     }
 
     // Clean generated directory
@@ -124,6 +124,29 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
     Ok(())
+}
+
+fn parse_args(args: &[String]) -> Result<(PathBuf, PathBuf)> {
+    let mut defs_dir = PathBuf::from("fixtures/definitions");
+    let mut gen_dir = PathBuf::from("fixtures/generated");
+
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--definitions" | "-d" => {
+                i += 1;
+                defs_dir = PathBuf::from(args.get(i).context("missing value for --definitions")?);
+            }
+            "--output" | "-o" => {
+                i += 1;
+                gen_dir = PathBuf::from(args.get(i).context("missing value for --output")?);
+            }
+            other => anyhow::bail!("unknown argument: {other}"),
+        }
+        i += 1;
+    }
+
+    Ok((defs_dir, gen_dir))
 }
 
 fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {

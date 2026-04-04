@@ -10,7 +10,7 @@
       "name": "fixtures",
       "path": ".",
       "versioned_files": [
-        { "path": "generator/Cargo.toml", "format": "cargo" }
+        { "path": "generator/Cargo.toml", "format": "toml" }
       ],
       "changelog": "CHANGELOG.md"
     }

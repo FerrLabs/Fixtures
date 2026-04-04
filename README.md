@@ -1,37 +1,82 @@
-# FerrFlow Tests
+# FerrFlow Fixtures
 
-Integration test fixtures and CI for [FerrFlow](https://github.com/FerrFlow-Org/FerrFlow).
+Reusable GitHub Action and CLI tool for generating git fixture repos from declarative TOML definitions. Used by [FerrFlow](https://github.com/FerrFlow-Org/FerrFlow) for integration tests and [Benchmarks](https://github.com/FerrFlow-Org/Benchmarks) for performance testing.
 
-## How it works
+## Usage as GitHub Action
 
-1. **Fixture definitions** (`fixtures/definitions/`) describe test scenarios declaratively in TOML: packages, commits, tags, config, and expected outputs
-2. **Generator** (`generator/`) reads definitions and builds real git repos with precise histories
-3. **Runner** (`scripts/run-tests.sh`) executes `ferrflow check` against each generated repo and compares output to snapshots
-4. **CI** runs on every push and on a schedule, also triggered by FerrFlow PRs via a reusable workflow
-
-## Directory structure
-
+```yaml
+- uses: FerrFlow-Org/Fixtures@v0
+  with:
+    definitions: tests/fixtures/definitions  # path to your TOML definitions
+    ferrflow-bin: ./target/release/ferrflow   # path to ferrflow binary
+    mode: test                                # "test" or "generate"
 ```
-.
-├── fixtures/
-│   ├── definitions/       # TOML files describing test scenarios
-│   └── generated/         # (gitignored) repos built by the generator
-├── generator/             # Rust binary that builds fixture repos from definitions
-│   ├── Cargo.toml
-│   └── src/
-│       └── main.rs
-├── snapshots/             # Expected CLI output per fixture
-├── scripts/
-│   └── run-tests.sh       # Test runner script
-└── .github/
-    └── workflows/
-        ├── test.yml       # CI: generate fixtures and run tests
-        └── action.yml     # Reusable action for FerrFlow CI
+
+### Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `definitions` | no | `fixtures/definitions` (bundled) | Path to TOML definitions directory |
+| `ferrflow-bin` | no | | Path to ferrflow binary (required for `test` mode) |
+| `mode` | no | `test` | `generate` (only build repos) or `test` (build + run ferrflow) |
+| `generated-dir` | no | temp dir | Output directory for generated repos |
+
+### Outputs
+
+| Output | Description |
+|--------|-------------|
+| `generated-path` | Path to the generated fixture repos |
+| `passed` | Number of tests passed |
+| `failed` | Number of tests failed |
+
+### Example: FerrFlow CI
+
+```yaml
+- name: Build ferrflow
+  run: cargo build --release
+
+- name: Integration tests
+  uses: FerrFlow-Org/Fixtures@v0
+  with:
+    definitions: tests/fixtures/definitions
+    ferrflow-bin: ./target/release/ferrflow
+```
+
+### Example: Generate only (for benchmarks)
+
+```yaml
+- name: Generate fixture repos
+  id: fixtures
+  uses: FerrFlow-Org/Fixtures@v0
+  with:
+    definitions: benchmarks/fixtures
+    mode: generate
+
+- name: Run benchmarks against fixtures
+  run: ./bench.sh ${{ steps.fixtures.outputs.generated-path }}
+```
+
+## Usage as CLI
+
+```bash
+# Build the generator
+cd generator && cargo build --release
+
+# Generate with defaults (fixtures/definitions/ -> fixtures/generated/)
+./generator/target/release/generate-fixtures
+
+# Generate from custom paths
+./generator/target/release/generate-fixtures \
+  --definitions /path/to/definitions \
+  --output /path/to/output
+
+# Run tests (requires ferrflow in PATH)
+./scripts/run-tests.sh [generated-dir]
 ```
 
 ## Fixture definition format
 
-Each `.toml` file in `fixtures/definitions/` describes a scenario:
+Each `.toml` file describes a test scenario:
 
 ```toml
 [meta]
@@ -39,7 +84,6 @@ name = "monorepo-two-packages"
 description = "Two packages with independent version bumps"
 
 [config]
-# Inline ferrflow.json content
 content = '''
 {
   "package": [
@@ -73,11 +117,9 @@ check_not_contains = ["Nothing to release"]
 packages_released = 2
 ```
 
-### Advanced definition features
+### Advanced features
 
 #### Tags at arbitrary commits
-
-Place tags at any point in the commit history using `[[tags]]`:
 
 ```toml
 [[tags]]
@@ -93,8 +135,6 @@ The old-style `tag` field on `[[packages]]` still works for tags on the initial 
 
 #### Config format selection
 
-Choose the config file format and name:
-
 ```toml
 [config]
 format = "toml"             # "json" (default), "toml", "json5"
@@ -106,8 +146,6 @@ content = '''
 
 #### Hook scripts
 
-Write executable hook scripts into the generated repo:
-
 ```toml
 [[hooks]]
 path = "hooks/pre-bump.sh"
@@ -118,8 +156,6 @@ echo "running pre-bump"
 
 #### Merge commits
 
-Create merge commits to test non-linear history handling:
-
 ```toml
 [[commits]]
 message = "feat: merged feature"
@@ -127,34 +163,22 @@ files = ["src/feature.rs"]
 merge = true
 ```
 
-## Running locally
+## Directory structure
 
-```bash
-# Build the generator
-cd generator && cargo build --release
-
-# Generate all fixtures
-../target/release/generate-fixtures
-
-# Run tests (requires ferrflow in PATH)
-./scripts/run-tests.sh
 ```
-
-## Adding a new test
-
-1. Create a new `.toml` file in `fixtures/definitions/`
-2. Add expected output in `snapshots/<fixture-name>.txt` (or let CI generate it on first run)
-3. Push — CI handles the rest
-
-## Reusable generator
-
-The fixture generator is designed to be reusable across the FerrFlow ecosystem. Any repo that needs realistic git repos with precise histories can use it:
-
-- **Tests** (this repo) — generate fixtures and run `ferrflow check` against them
-- **Benchmarks** (`FerrFlow-Org/Benchmarks`) — generate repos at various scales for perf testing
-- **Playground** — generate demo repos for the web playground
-
-The generator reads declarative TOML definitions and produces real git repos. No shell scripts, no manual setup.
+.
+├── action.yml                 # GitHub Action definition
+├── generator/                 # Rust binary that builds fixture repos
+│   ├── Cargo.toml
+│   └── src/main.rs
+├── fixtures/
+│   └── definitions/           # Bundled example definitions
+├── scripts/
+│   └── run-tests.sh           # Test runner script
+└── .github/
+    └── workflows/
+        └── test.yml           # CI for the generator itself
+```
 
 ## License
 

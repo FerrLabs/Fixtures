@@ -2,7 +2,7 @@
 set -euo pipefail
 
 FERRFLOW="${FERRFLOW_BIN:-ferrflow}"
-GEN_DIR="fixtures/generated"
+GEN_DIR="${1:-${GEN_DIR:-fixtures/generated}}"
 PASSED=0
 FAILED=0
 ERRORS=()

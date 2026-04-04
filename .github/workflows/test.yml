@@ -1,46 +1,38 @@
-name: Integration Tests
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:
-    inputs:
-      ferrflow_ref:
-        description: "FerrFlow ref to test against (branch, tag, or SHA)"
-        required: false
-        default: "main"
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  build:
+    name: Build & Generate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache generator build
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: generator/target
-          key: generator-${{ runner.os }}-${{ hashFiles('generator/Cargo.lock', 'generator/Cargo.toml') }}
+          key: generator-${{ runner.os }}-${{ hashFiles('generator/Cargo.lock', 'generator/Cargo.toml', 'generator/src/**') }}
 
-      - name: Build fixture generator
+      - name: Build generator
         working-directory: generator
         run: cargo build --release
 
-      - name: Generate fixtures
+      - name: Generate bundled fixtures (default args)
         run: ./generator/target/release/generate-fixtures
 
-      - name: Install FerrFlow
+      - name: Generate to custom output (--definitions / --output)
         run: |
-          REF="${{ github.event.inputs.ferrflow_ref || 'main' }}"
-          git clone --depth 1 --branch "$REF" https://github.com/FerrFlow-Org/FerrFlow.git /tmp/ferrflow || \
-            git clone --depth 1 https://github.com/FerrFlow-Org/FerrFlow.git /tmp/ferrflow
-          cd /tmp/ferrflow
-          cargo build --release
-          echo "/tmp/ferrflow/target/release" >> "$GITHUB_PATH"
-
-      - name: Run tests
-        run: ./scripts/run-tests.sh
+          ./generator/target/release/generate-fixtures \
+            --definitions fixtures/definitions \
+            --output /tmp/custom-output
+          test -d /tmp/custom-output
+          echo "Custom output generated successfully"
