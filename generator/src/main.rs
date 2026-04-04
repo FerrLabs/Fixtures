@@ -12,7 +12,8 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Deserialize)]
 struct FixtureDef {
     meta: Meta,
-    config: ConfigDef,
+    #[serde(default)]
+    config: Option<ConfigDef>,
     #[serde(default)]
     packages: Vec<PackageDef>,
     #[serde(default)]
@@ -379,8 +380,10 @@ fn generate_explicit(def: &FixtureDef, output_dir: &Path) -> Result<()> {
         config.set_str("user.email", "test@test.com")?;
     }
 
-    let config_filename = resolve_config_filename(&def.config);
-    fs::write(output_dir.join(&config_filename), &def.config.content)?;
+    if let Some(config) = &def.config {
+        let config_filename = resolve_config_filename(config);
+        fs::write(output_dir.join(&config_filename), &config.content)?;
+    }
 
     for pkg in &def.packages {
         let pkg_dir = output_dir.join(&pkg.path);
@@ -477,7 +480,9 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path) -> Result<()> {
         // Monorepo: generate N packages
         let packages: Vec<String> = (1..=pkg_count).map(|i| format!("pkg-{i:03}")).collect();
 
-        b.set_file(&repo, &resolve_config_filename(&def.config), def.config.content.as_bytes())?;
+        if let Some(config) = &def.config {
+            b.set_file(&repo, &resolve_config_filename(config), config.content.as_bytes())?;
+        }
 
         for p in &packages {
             let content = format!("{{\n  \"name\": \"{p}\",\n  \"version\": \"0.1.0\"\n}}\n");
@@ -512,7 +517,9 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path) -> Result<()> {
         }
     } else {
         // Single package
-        b.set_file(&repo, &resolve_config_filename(&def.config), def.config.content.as_bytes())?;
+        if let Some(config) = &def.config {
+            b.set_file(&repo, &resolve_config_filename(config), config.content.as_bytes())?;
+        }
         b.set_file(
             &repo,
             "package.json",
