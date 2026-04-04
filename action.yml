@@ -1,5 +1,5 @@
 name: 'FerrFlow Fixtures'
-description: 'Generate git fixture repos from TOML definitions and run integration tests'
+description: 'Generate git fixture repos from declarative TOML definitions'
 author: 'FerrFlow-Org'
 branding:
   icon: 'box'
@@ -9,14 +9,6 @@ inputs:
   definitions:
     description: 'Path to directory containing TOML fixture definitions (provided by the consumer repo)'
     required: true
-  ferrflow-bin:
-    description: 'Path to ferrflow binary for running tests'
-    required: false
-    default: ''
-  mode:
-    description: 'Operation mode: generate (only generate repos), test (generate + run tests)'
-    required: false
-    default: 'test'
   generated-dir:
     description: 'Output directory for generated fixture repos'
     required: false
@@ -26,12 +18,6 @@ outputs:
   generated-path:
     description: 'Path to generated fixture repos'
     value: ${{ steps.generate.outputs.generated-path }}
-  passed:
-    description: 'Number of tests passed'
-    value: ${{ steps.test.outputs.passed }}
-  failed:
-    description: 'Number of tests failed'
-    value: ${{ steps.test.outputs.failed }}
 
 runs:
   using: 'composite'
@@ -56,19 +42,15 @@ runs:
       working-directory: __fixtures__/generator
       run: cargo build --release
 
-    - name: Prepare definitions
+    - name: Prepare output directory
       id: prepare
       shell: bash
       run: |
-        DEFS_DIR="${{ inputs.definitions }}"
         GEN_DIR="${{ inputs.generated-dir }}"
-
         if [[ -z "$GEN_DIR" ]]; then
           GEN_DIR="$(mktemp -d)/generated"
         fi
-
         mkdir -p "$GEN_DIR"
-        echo "defs-dir=$DEFS_DIR" >> "$GITHUB_OUTPUT"
         echo "gen-dir=$GEN_DIR" >> "$GITHUB_OUTPUT"
 
     - name: Generate fixtures
@@ -76,23 +58,9 @@ runs:
       shell: bash
       run: |
         __fixtures__/generator/target/release/generate-fixtures \
-          --definitions "${{ steps.prepare.outputs.defs-dir }}" \
+          --definitions "${{ inputs.definitions }}" \
           --output "${{ steps.prepare.outputs.gen-dir }}"
         echo "generated-path=${{ steps.prepare.outputs.gen-dir }}" >> "$GITHUB_OUTPUT"
-
-    - name: Run tests
-      id: test
-      if: inputs.mode == 'test' && inputs.ferrflow-bin != ''
-      shell: bash
-      env:
-        FERRFLOW_BIN: ${{ inputs.ferrflow-bin }}
-        GEN_DIR: ${{ steps.prepare.outputs.gen-dir }}
-      run: |
-        bash __fixtures__/scripts/run-tests.sh "$GEN_DIR" | tee /tmp/fixtures-results.txt
-        PASSED=$(grep -oP '\d+(?= passed)' /tmp/fixtures-results.txt || echo "0")
-        FAILED=$(grep -oP '\d+(?= failed)' /tmp/fixtures-results.txt || echo "0")
-        echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
-        echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
 
     - name: Cleanup
       if: always()

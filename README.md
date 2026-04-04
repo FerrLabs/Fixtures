@@ -2,14 +2,19 @@
 
 Reusable GitHub Action and CLI tool for generating git fixture repos from declarative TOML definitions. Used by [FerrFlow](https://github.com/FerrFlow-Org/FerrFlow) for integration tests and [Benchmarks](https://github.com/FerrFlow-Org/Benchmarks) for performance testing.
 
+Fixtures is a pure generator — it builds repos from TOML definitions but does not run any tests. Each consumer repo (FerrFlow, Benchmarks, etc.) owns its own definitions and test runner.
+
 ## Usage as GitHub Action
 
 ```yaml
-- uses: FerrFlow-Org/Fixtures@v0
+- name: Generate fixture repos
+  id: fixtures
+  uses: FerrFlow-Org/Fixtures@v0
   with:
-    definitions: tests/fixtures/definitions  # path to your TOML definitions
-    ferrflow-bin: ./target/release/ferrflow   # path to ferrflow binary
-    mode: test                                # "test" or "generate"
+    definitions: tests/fixtures/definitions
+
+- name: Run tests against fixtures
+  run: ./scripts/run-fixture-tests.sh ${{ steps.fixtures.outputs.generated-path }}
 ```
 
 ### Inputs
@@ -17,8 +22,6 @@ Reusable GitHub Action and CLI tool for generating git fixture repos from declar
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `definitions` | **yes** | | Path to TOML definitions directory (provided by the consumer repo) |
-| `ferrflow-bin` | no | | Path to ferrflow binary (required for `test` mode) |
-| `mode` | no | `test` | `generate` (only build repos) or `test` (build + run ferrflow) |
 | `generated-dir` | no | temp dir | Output directory for generated repos |
 
 ### Outputs
@@ -26,35 +29,6 @@ Reusable GitHub Action and CLI tool for generating git fixture repos from declar
 | Output | Description |
 |--------|-------------|
 | `generated-path` | Path to the generated fixture repos |
-| `passed` | Number of tests passed |
-| `failed` | Number of tests failed |
-
-### Example: FerrFlow CI
-
-```yaml
-- name: Build ferrflow
-  run: cargo build --release
-
-- name: Integration tests
-  uses: FerrFlow-Org/Fixtures@v0
-  with:
-    definitions: tests/fixtures/definitions
-    ferrflow-bin: ./target/release/ferrflow
-```
-
-### Example: Generate only (for benchmarks)
-
-```yaml
-- name: Generate fixture repos
-  id: fixtures
-  uses: FerrFlow-Org/Fixtures@v0
-  with:
-    definitions: benchmarks/fixtures
-    mode: generate
-
-- name: Run benchmarks against fixtures
-  run: ./bench.sh ${{ steps.fixtures.outputs.generated-path }}
-```
 
 ## Usage as CLI
 
@@ -62,21 +36,15 @@ Reusable GitHub Action and CLI tool for generating git fixture repos from declar
 # Build the generator
 cd generator && cargo build --release
 
-# Generate with defaults (fixtures/definitions/ -> fixtures/generated/)
-./generator/target/release/generate-fixtures
-
 # Generate from custom paths
 ./generator/target/release/generate-fixtures \
   --definitions /path/to/definitions \
   --output /path/to/output
-
-# Run tests (requires ferrflow in PATH)
-./scripts/run-tests.sh [generated-dir]
 ```
 
 ## Fixture definition format
 
-Each `.toml` file describes a test scenario:
+Each `.toml` file describes a git repo scenario:
 
 ```toml
 [meta]
@@ -116,6 +84,8 @@ check_contains = ["core", "0.2.0", "cli", "0.1.1"]
 check_not_contains = ["Nothing to release"]
 packages_released = 2
 ```
+
+The `[expect]` section is ignored by the generator — it's metadata for the consumer's test runner.
 
 ### Advanced features
 
@@ -173,8 +143,6 @@ merge = true
 │   └── src/main.rs
 ├── fixtures/
 │   └── examples/              # Example definitions for reference
-├── scripts/
-│   └── run-tests.sh           # Test runner script
 └── .github/
     └── workflows/
         └── test.yml           # CI for the generator itself
