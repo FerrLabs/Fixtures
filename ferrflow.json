@@ -4,7 +4,7 @@
     "branch": "main",
     "releaseCommitMode": "commit",
     "floatingTags": ["major"],
-    "skipCi": false
+    "skipCi": true
   },
   "package": [
     {
