@@ -87,6 +87,26 @@ packages_released = 2
 
 The `[expect]` section is ignored by the generator — it's metadata for the consumer's test runner.
 
+### Bulk generation
+
+For benchmarks or stress tests, use `[generate]` to create repos with many packages and commits without listing them individually:
+
+```toml
+[meta]
+name = "mono-large"
+description = "200 packages, 10000 commits"
+
+[config]
+content = '{}'
+
+[generate]
+packages = 200    # number of packages (1 = single-package repo)
+commits = 10000   # number of synthetic commits
+seed = 42         # optional RNG seed for deterministic output
+```
+
+Uses an incremental tree builder for fast generation (10k commits in under a minute).
+
 ### Advanced features
 
 #### Tags at arbitrary commits

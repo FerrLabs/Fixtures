@@ -1,8 +1,13 @@
 use anyhow::{Context, Result};
-use git2::{Repository, Signature};
+use git2::{FileMode, Oid, Repository, Signature, Time};
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+// ---------------------------------------------------------------------------
+// TOML definition types
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
 struct FixtureDef {
@@ -16,7 +21,10 @@ struct FixtureDef {
     tags: Vec<TagDef>,
     #[serde(default)]
     hooks: Vec<HookFileDef>,
-    expect: ExpectDef,
+    #[serde(default)]
+    generate: Option<GenerateDef>,
+    #[serde(default)]
+    expect: Option<ExpectDef>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -70,6 +78,26 @@ struct HookFileDef {
 }
 
 #[derive(Debug, Deserialize)]
+struct GenerateDef {
+    #[serde(default = "default_gen_packages")]
+    packages: usize,
+    #[serde(default = "default_gen_commits")]
+    commits: usize,
+    #[serde(default = "default_gen_seed")]
+    seed: u64,
+}
+
+fn default_gen_packages() -> usize {
+    1
+}
+fn default_gen_commits() -> usize {
+    100
+}
+fn default_gen_seed() -> u64 {
+    42
+}
+
+#[derive(Debug, Deserialize, Default)]
 struct ExpectDef {
     #[serde(default)]
     check_contains: Vec<String>,
@@ -81,6 +109,181 @@ struct ExpectDef {
     packages_released: Option<usize>,
 }
 
+// ---------------------------------------------------------------------------
+// Incremental tree builder for bulk commits (fast)
+// ---------------------------------------------------------------------------
+
+enum TreeEntry {
+    Blob(Oid),
+    Tree(TreeNode),
+}
+
+struct TreeNode {
+    entries: HashMap<String, TreeEntry>,
+    cached_oid: Option<Oid>,
+}
+
+impl TreeNode {
+    fn new() -> Self {
+        Self {
+            entries: HashMap::new(),
+            cached_oid: None,
+        }
+    }
+
+    fn invalidate(&mut self) {
+        self.cached_oid = None;
+    }
+
+    fn insert_blob(&mut self, path: &str, blob_oid: Oid) {
+        self.invalidate();
+        if let Some(slash) = path.find('/') {
+            let dir = &path[..slash];
+            let rest = &path[slash + 1..];
+            let child = self
+                .entries
+                .entry(dir.to_string())
+                .or_insert_with(|| TreeEntry::Tree(TreeNode::new()));
+            match child {
+                TreeEntry::Tree(node) => node.insert_blob(rest, blob_oid),
+                _ => panic!("path conflict: {dir} is a blob, not a tree"),
+            }
+        } else {
+            self.entries
+                .insert(path.to_string(), TreeEntry::Blob(blob_oid));
+        }
+    }
+
+    fn write(&mut self, repo: &Repository) -> Result<Oid> {
+        if let Some(oid) = self.cached_oid {
+            return Ok(oid);
+        }
+        let mut builder = repo.treebuilder(None)?;
+        for (name, entry) in &mut self.entries {
+            match entry {
+                TreeEntry::Blob(oid) => {
+                    builder.insert(name, *oid, FileMode::Blob.into())?;
+                }
+                TreeEntry::Tree(node) => {
+                    let oid = node.write(repo)?;
+                    builder.insert(name, oid, FileMode::Tree.into())?;
+                }
+            }
+        }
+        let oid = builder.write()?;
+        self.cached_oid = Some(oid);
+        Ok(oid)
+    }
+}
+
+struct BulkRepoBuilder {
+    root: TreeNode,
+    dummy_content: HashMap<String, Vec<u8>>,
+}
+
+impl BulkRepoBuilder {
+    fn new() -> Self {
+        Self {
+            root: TreeNode::new(),
+            dummy_content: HashMap::new(),
+        }
+    }
+
+    fn set_file(&mut self, repo: &Repository, path: &str, content: &[u8]) -> Result<()> {
+        let blob_oid = repo.blob(content)?;
+        self.root.insert_blob(path, blob_oid);
+        Ok(())
+    }
+
+    fn append_dummy(&mut self, repo: &Repository, path: &str) -> Result<()> {
+        let content = self.dummy_content.entry(path.to_string()).or_default();
+        content.extend_from_slice(b"change\n");
+        let blob_oid = repo.blob(content)?;
+        self.root.insert_blob(path, blob_oid);
+        Ok(())
+    }
+
+    fn commit(
+        &mut self,
+        repo: &Repository,
+        parent: Option<Oid>,
+        msg: &str,
+        time: &Time,
+    ) -> Result<Oid> {
+        let tree_id = self.root.write(repo)?;
+        let tree = repo.find_tree(tree_id)?;
+        let s = Signature::new("Test", "test@test.com", time)?;
+
+        let oid = match parent {
+            Some(pid) => {
+                let p = repo.find_commit(pid)?;
+                repo.commit(Some("HEAD"), &s, &s, msg, &tree, &[&p])?
+            }
+            None => repo.commit(Some("HEAD"), &s, &s, msg, &tree, &[])?,
+        };
+        Ok(oid)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Simple RNG for deterministic bulk generation
+// ---------------------------------------------------------------------------
+
+struct Rng(u64);
+
+impl Rng {
+    fn new(seed: u64) -> Self {
+        Self(seed)
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        self.0 ^= self.0 << 13;
+        self.0 ^= self.0 >> 7;
+        self.0 ^= self.0 << 17;
+        self.0
+    }
+
+    fn usize(&mut self, max: usize) -> usize {
+        (self.next_u64() % max as u64) as usize
+    }
+
+    fn pick<'a>(&mut self, items: &'a [&str]) -> &'a str {
+        items[self.usize(items.len())]
+    }
+}
+
+const COMMIT_TYPES: &[&str] = &[
+    "feat", "fix", "refactor", "perf", "chore", "docs", "ci", "test",
+];
+const WORDS_A: &[&str] = &[
+    "update", "add", "remove", "refactor", "improve", "fix", "handle", "support", "implement",
+    "optimize",
+];
+const WORDS_B: &[&str] = &[
+    "feature", "endpoint", "handler", "logic", "validation", "error", "check", "flow", "config",
+    "output",
+];
+
+fn rand_message(rng: &mut Rng, scope: &str) -> String {
+    let t = rng.pick(COMMIT_TYPES);
+    let bang = if rng.usize(20) == 0 { "!" } else { "" };
+    let a = rng.pick(WORDS_A);
+    let b = rng.pick(WORDS_B);
+    format!("{t}({scope}){bang}: {a} {b}")
+}
+
+fn rand_time(rng: &mut Rng, now: i64) -> Time {
+    let days = rng.usize(365) as i64;
+    let hours = rng.usize(24) as i64;
+    let mins = rng.usize(60) as i64;
+    let offset = days * 86400 + hours * 3600 + mins * 60;
+    Time::new(now - offset, 0)
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let (defs_dir, gen_dir) = parse_args(&args)?;
@@ -89,7 +292,6 @@ fn main() -> Result<()> {
         anyhow::bail!("{} not found.", defs_dir.display());
     }
 
-    // Clean generated directory
     if gen_dir.exists() {
         fs::remove_dir_all(&gen_dir)?;
     }
@@ -149,15 +351,27 @@ fn parse_args(args: &[String]) -> Result<(PathBuf, PathBuf)> {
     Ok((defs_dir, gen_dir))
 }
 
+// ---------------------------------------------------------------------------
+// Fixture generation
+// ---------------------------------------------------------------------------
+
 fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {
     let content = fs::read_to_string(def_path)
         .with_context(|| format!("reading {}", def_path.display()))?;
     let def: FixtureDef =
         toml::from_str(&content).with_context(|| format!("parsing {}", def_path.display()))?;
 
+    if def.generate.is_some() {
+        generate_bulk(&def, output_dir)
+    } else {
+        generate_explicit(&def, output_dir)
+    }
+}
+
+/// Generate a fixture from explicit [[commits]] definitions.
+fn generate_explicit(def: &FixtureDef, output_dir: &Path) -> Result<()> {
     fs::create_dir_all(output_dir)?;
 
-    // Init git repo
     let repo = Repository::init(output_dir)?;
     {
         let mut config = repo.config()?;
@@ -165,17 +379,9 @@ fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {
         config.set_str("user.email", "test@test.com")?;
     }
 
-    // Write ferrflow config with the specified format and filename
-    let config_filename = def.config.filename.clone().unwrap_or_else(|| {
-        match def.config.format.as_str() {
-            "toml" => ".ferrflow.toml".to_string(),
-            "json5" => "ferrflow.json5".to_string(),
-            _ => "ferrflow.json".to_string(),
-        }
-    });
+    let config_filename = resolve_config_filename(&def.config);
     fs::write(output_dir.join(&config_filename), &def.config.content)?;
 
-    // Write version files for each package
     for pkg in &def.packages {
         let pkg_dir = output_dir.join(&pkg.path);
         fs::create_dir_all(pkg_dir.join("src"))?;
@@ -194,7 +400,6 @@ fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {
         )?;
     }
 
-    // Write hook scripts
     for hook in &def.hooks {
         let hook_path = output_dir.join(&hook.path);
         if let Some(parent) = hook_path.parent() {
@@ -208,11 +413,9 @@ fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {
         }
     }
 
-    // Initial commit
-    let initial_oid = add_all_and_commit(&repo, output_dir, "chore: initial setup")?;
+    let initial_oid = add_all_and_commit(&repo, "chore: initial setup")?;
     let mut commit_oids: Vec<git2::Oid> = Vec::new();
 
-    // Create tags from old-style PackageDef.tag (placed on initial commit)
     for pkg in &def.packages {
         if let Some(tag) = &pkg.tag {
             let commit = repo.find_commit(initial_oid)?;
@@ -220,7 +423,6 @@ fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {
         }
     }
 
-    // Apply tags at initial commit (at_commit == -1)
     for tag_def in &def.tags {
         if tag_def.at_commit == -1 {
             let commit = repo.find_commit(initial_oid)?;
@@ -228,7 +430,6 @@ fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {
         }
     }
 
-    // Apply commits and collect OIDs
     for (i, commit_def) in def.commits.iter().enumerate() {
         for file in &commit_def.files {
             let file_path = output_dir.join(file);
@@ -241,11 +442,10 @@ fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {
         let oid = if commit_def.merge {
             create_merge_commit(&repo, output_dir, &commit_def.message)?
         } else {
-            add_all_and_commit(&repo, output_dir, &commit_def.message)?
+            add_all_and_commit(&repo, &commit_def.message)?
         };
         commit_oids.push(oid);
 
-        // Apply tags at this commit index
         for tag_def in &def.tags {
             if tag_def.at_commit == i as i32 {
                 let tagged_commit = repo.find_commit(oid)?;
@@ -254,21 +454,109 @@ fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {
         }
     }
 
-    // Write expect metadata for the runner
-    let expect_path = output_dir.join(".expect.toml");
-    let expect_content = toml::to_string_pretty(&SerializableExpect {
-        check_contains: &def.expect.check_contains,
-        check_not_contains: &def.expect.check_not_contains,
-        output_order: &def.expect.output_order,
-        packages_released: def.expect.packages_released,
-        description: &def.meta.description,
-    })?;
-    fs::write(&expect_path, expect_content)?;
-
+    write_expect(output_dir, &def)?;
     Ok(())
 }
 
-fn add_all_and_commit(repo: &Repository, _dir: &Path, message: &str) -> Result<git2::Oid> {
+/// Generate a fixture with bulk synthetic commits (fast incremental tree builder).
+fn generate_bulk(def: &FixtureDef, output_dir: &Path) -> Result<()> {
+    let gen = def.generate.as_ref().unwrap();
+    let pkg_count = gen.packages;
+    let commit_count = gen.commits;
+
+    fs::create_dir_all(output_dir)?;
+
+    let repo = Repository::init(output_dir)?;
+    let mut b = BulkRepoBuilder::new();
+    let mut rng = Rng::new(gen.seed);
+    let now = chrono::Utc::now().timestamp();
+
+    let is_mono = pkg_count > 1;
+
+    if is_mono {
+        // Monorepo: generate N packages
+        let packages: Vec<String> = (1..=pkg_count).map(|i| format!("pkg-{i:03}")).collect();
+
+        b.set_file(&repo, &resolve_config_filename(&def.config), def.config.content.as_bytes())?;
+
+        for p in &packages {
+            let content = format!("{{\n  \"name\": \"{p}\",\n  \"version\": \"0.1.0\"\n}}\n");
+            b.set_file(
+                &repo,
+                &format!("packages/{p}/package.json"),
+                content.as_bytes(),
+            )?;
+        }
+
+        let t = rand_time(&mut rng, now);
+        let oid = b.commit(&repo, None, "chore: initial commit", &t)?;
+
+        let obj = repo.find_object(oid, None)?;
+        for p in &packages {
+            repo.tag_lightweight(&format!("{p}@v0.1.0"), &obj, false)?;
+        }
+
+        let mut parent = oid;
+        for i in 1..=commit_count {
+            let pkg = &packages[rng.usize(pkg_count)];
+            let path = format!("packages/{pkg}/dummy.txt");
+            b.append_dummy(&repo, &path)?;
+
+            let msg = rand_message(&mut rng, pkg);
+            let t = rand_time(&mut rng, now);
+            parent = b.commit(&repo, Some(parent), &msg, &t)?;
+
+            if commit_count >= 1000 && i % 2000 == 0 {
+                eprintln!("    {}/{commit_count}", i);
+            }
+        }
+    } else {
+        // Single package
+        b.set_file(&repo, &resolve_config_filename(&def.config), def.config.content.as_bytes())?;
+        b.set_file(
+            &repo,
+            "package.json",
+            b"{\n  \"name\": \"myapp\",\n  \"version\": \"0.1.0\"\n}\n",
+        )?;
+        b.set_file(&repo, "dummy.txt", b"")?;
+
+        let t = rand_time(&mut rng, now);
+        let oid = b.commit(&repo, None, "chore: initial commit", &t)?;
+
+        let obj = repo.find_object(oid, None)?;
+        repo.tag_lightweight("v0.1.0", &obj, false)?;
+
+        let scopes = ["core", "api", "cli", "config", "parser"];
+        let mut parent = oid;
+        for _ in 0..commit_count {
+            b.append_dummy(&repo, "dummy.txt")?;
+            let scope = rng.pick(&scopes);
+            let msg = rand_message(&mut rng, scope);
+            let t = rand_time(&mut rng, now);
+            parent = b.commit(&repo, Some(parent), &msg, &t)?;
+        }
+    }
+
+    repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))?;
+    write_expect(output_dir, def)?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+fn resolve_config_filename(config: &ConfigDef) -> String {
+    config.filename.clone().unwrap_or_else(|| {
+        match config.format.as_str() {
+            "toml" => ".ferrflow.toml".to_string(),
+            "json5" => "ferrflow.json5".to_string(),
+            _ => "ferrflow.json".to_string(),
+        }
+    })
+}
+
+fn add_all_and_commit(repo: &Repository, message: &str) -> Result<git2::Oid> {
     let mut index = repo.index()?;
     index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None)?;
     index.write()?;
@@ -292,14 +580,12 @@ fn create_merge_commit(repo: &Repository, _dir: &Path, message: &str) -> Result<
     let sig = Signature::now("Test", "test@test.com")?;
     let main_commit = repo.head()?.peel_to_commit()?;
 
-    // Stage working changes
     let mut index = repo.index()?;
     index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None)?;
     index.write()?;
     let tree_id = index.write_tree()?;
     let tree = repo.find_tree(tree_id)?;
 
-    // Create the branch commit (not updating HEAD)
     let branch_oid = repo.commit(
         None,
         &sig,
@@ -310,7 +596,6 @@ fn create_merge_commit(repo: &Repository, _dir: &Path, message: &str) -> Result<
     )?;
     let branch_commit = repo.find_commit(branch_oid)?;
 
-    // Create the merge commit with two parents
     let merge_oid = repo.commit(
         Some("HEAD"),
         &sig,
@@ -321,6 +606,20 @@ fn create_merge_commit(repo: &Repository, _dir: &Path, message: &str) -> Result<
     )?;
 
     Ok(merge_oid)
+}
+
+fn write_expect(output_dir: &Path, def: &FixtureDef) -> Result<()> {
+    let expect = def.expect.as_ref();
+    let expect_path = output_dir.join(".expect.toml");
+    let expect_content = toml::to_string_pretty(&SerializableExpect {
+        check_contains: expect.map(|e| &e.check_contains[..]).unwrap_or(&[]),
+        check_not_contains: expect.map(|e| &e.check_not_contains[..]).unwrap_or(&[]),
+        output_order: expect.map(|e| &e.output_order[..]).unwrap_or(&[]),
+        packages_released: expect.and_then(|e| e.packages_released),
+        description: &def.meta.description,
+    })?;
+    fs::write(&expect_path, expect_content)?;
+    Ok(())
 }
 
 #[derive(serde::Serialize)]
