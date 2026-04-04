@@ -3,7 +3,8 @@
   "workspace": {
     "branch": "main",
     "releaseCommitMode": "commit",
-    "floatingTags": ["major"]
+    "floatingTags": ["major"],
+    "skipCi": false
   },
   "package": [
     {
