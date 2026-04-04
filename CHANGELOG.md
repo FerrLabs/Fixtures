@@ -4,6 +4,12 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.0] - 2026-04-04
+
+### Features
+
+- feat: add bulk generation mode for benchmarks and stress tests (#20)
+
 ## [0.2.3] - 2026-04-04
 
 ## [0.2.2] - 2026-04-04
