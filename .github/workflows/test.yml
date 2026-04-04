@@ -26,13 +26,10 @@ jobs:
         working-directory: generator
         run: cargo build --release
 
-      - name: Generate bundled fixtures (default args)
-        run: ./generator/target/release/generate-fixtures
-
-      - name: Generate to custom output (--definitions / --output)
+      - name: Generate example fixtures
         run: |
           ./generator/target/release/generate-fixtures \
-            --definitions fixtures/definitions \
-            --output /tmp/custom-output
-          test -d /tmp/custom-output
-          echo "Custom output generated successfully"
+            --definitions fixtures/examples \
+            --output /tmp/generated
+          test -d /tmp/generated
+          echo "Example fixtures generated successfully"

@@ -16,7 +16,7 @@ Reusable GitHub Action and CLI tool for generating git fixture repos from declar
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `definitions` | no | `fixtures/definitions` (bundled) | Path to TOML definitions directory |
+| `definitions` | **yes** | | Path to TOML definitions directory (provided by the consumer repo) |
 | `ferrflow-bin` | no | | Path to ferrflow binary (required for `test` mode) |
 | `mode` | no | `test` | `generate` (only build repos) or `test` (build + run ferrflow) |
 | `generated-dir` | no | temp dir | Output directory for generated repos |
@@ -138,7 +138,7 @@ The old-style `tag` field on `[[packages]]` still works for tags on the initial 
 ```toml
 [config]
 format = "toml"             # "json" (default), "toml", "json5"
-filename = ".ferrflow.toml"  # optional, auto-derived from format if omitted
+filename = "ferrflow.toml"   # optional, auto-derived from format if omitted
 content = '''
 ...
 '''
@@ -172,7 +172,7 @@ merge = true
 │   ├── Cargo.toml
 │   └── src/main.rs
 ├── fixtures/
-│   └── definitions/           # Bundled example definitions
+│   └── examples/              # Example definitions for reference
 ├── scripts/
 │   └── run-tests.sh           # Test runner script
 └── .github/

@@ -7,9 +7,8 @@ branding:
 
 inputs:
   definitions:
-    description: 'Path to directory containing TOML fixture definitions'
-    required: false
-    default: ''
+    description: 'Path to directory containing TOML fixture definitions (provided by the consumer repo)'
+    required: true
   ferrflow-bin:
     description: 'Path to ferrflow binary for running tests'
     required: false
@@ -63,10 +62,6 @@ runs:
       run: |
         DEFS_DIR="${{ inputs.definitions }}"
         GEN_DIR="${{ inputs.generated-dir }}"
-
-        if [[ -z "$DEFS_DIR" ]]; then
-          DEFS_DIR="__fixtures__/fixtures/definitions"
-        fi
 
         if [[ -z "$GEN_DIR" ]]; then
           GEN_DIR="$(mktemp -d)/generated"
