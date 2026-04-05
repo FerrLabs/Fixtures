@@ -4,6 +4,12 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.7.0] - 2026-04-05
+
+### Features
+
+- feat: add default_branch support and head branch detection fixtures (#29)
+
 ## [0.6.0] - 2026-04-04
 
 ### Features
