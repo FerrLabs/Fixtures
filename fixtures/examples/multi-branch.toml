@@ -1,0 +1,52 @@
+[meta]
+name = "multi-branch"
+description = "Multiple branches with independent commits and a merge back"
+default_branch = "main"
+
+[config]
+content = '''
+{
+  "package": [
+    {
+      "name": "myapp",
+      "path": ".",
+      "versioned_files": [{"path": "version.toml", "format": "toml"}]
+    }
+  ]
+}
+'''
+
+[[packages]]
+name = "myapp"
+path = "."
+initial_version = "1.0.0"
+tag = "v1.0.0"
+
+[[commits]]
+message = "feat: add dashboard"
+files = ["src/dashboard.rs"]
+
+[[commits]]
+message = "fix: handle edge case"
+files = ["src/fix.rs"]
+
+[[branches]]
+name = "develop"
+from = "main"
+at_commit = 0
+merge = "main"
+commits = [
+  { message = "feat: new feature on develop", files = ["src/develop.rs"] },
+  { message = "fix: develop bugfix", files = ["src/develop-fix.rs"] },
+]
+
+[[branches]]
+name = "feature/analytics"
+from = "main"
+commits = [
+  { message = "feat: add analytics", files = ["src/analytics.rs"] },
+]
+
+[expect]
+check_contains = ["myapp", "1.1.0"]
+check_not_contains = ["Nothing to release"]

@@ -21,6 +21,8 @@ struct FixtureDef {
     #[serde(default)]
     tags: Vec<TagDef>,
     #[serde(default)]
+    branches: Vec<BranchDef>,
+    #[serde(default)]
     hooks: Vec<HookFileDef>,
     #[serde(default)]
     generate: Option<GenerateDef>,
@@ -72,6 +74,19 @@ struct CommitDef {
 struct TagDef {
     name: String,
     at_commit: i32,
+}
+
+#[derive(Debug, Deserialize)]
+struct BranchDef {
+    name: String,
+    #[serde(default)]
+    from: Option<String>,
+    #[serde(default)]
+    at_commit: Option<i32>,
+    #[serde(default)]
+    commits: Vec<CommitDef>,
+    #[serde(default)]
+    merge: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -259,11 +274,27 @@ const COMMIT_TYPES: &[&str] = &[
     "feat", "fix", "refactor", "perf", "chore", "docs", "ci", "test",
 ];
 const WORDS_A: &[&str] = &[
-    "update", "add", "remove", "refactor", "improve", "fix", "handle", "support", "implement",
+    "update",
+    "add",
+    "remove",
+    "refactor",
+    "improve",
+    "fix",
+    "handle",
+    "support",
+    "implement",
     "optimize",
 ];
 const WORDS_B: &[&str] = &[
-    "feature", "endpoint", "handler", "logic", "validation", "error", "check", "flow", "config",
+    "feature",
+    "endpoint",
+    "handler",
+    "logic",
+    "validation",
+    "error",
+    "check",
+    "flow",
+    "config",
     "output",
 ];
 
@@ -359,10 +390,10 @@ fn parse_args(args: &[String]) -> Result<(PathBuf, PathBuf)> {
 // ---------------------------------------------------------------------------
 
 fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {
-    let content = fs::read_to_string(def_path)
-        .with_context(|| format!("reading {}", def_path.display()))?;
-    let def: FixtureDef =
-        serde_json::from_str(&content).with_context(|| format!("parsing {}", def_path.display()))?;
+    let content =
+        fs::read_to_string(def_path).with_context(|| format!("reading {}", def_path.display()))?;
+    let def: FixtureDef = serde_json::from_str(&content)
+        .with_context(|| format!("parsing {}", def_path.display()))?;
 
     if def.generate.is_some() {
         generate_bulk(&def, output_dir)
@@ -459,7 +490,97 @@ fn generate_explicit(def: &FixtureDef, output_dir: &Path) -> Result<()> {
         }
     }
 
-    write_expect(output_dir, &def)?;
+    // Process branches: create each branch from a specific point and add commits.
+    let default_branch_name = def.meta.default_branch.as_deref().unwrap_or("main");
+
+    for branch_def in &def.branches {
+        // Resolve the fork point: find the commit to branch from.
+        let from_branch = branch_def.from.as_deref().unwrap_or(default_branch_name);
+        let fork_oid = match branch_def.at_commit {
+            Some(-1) => initial_oid,
+            Some(idx) if idx >= 0 => *commit_oids.get(idx as usize).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "branch '{}': at_commit {} out of range (only {} commits)",
+                    branch_def.name,
+                    idx,
+                    commit_oids.len()
+                )
+            })?,
+            _ => {
+                // Default: tip of the from-branch
+                let reference = repo
+                    .find_branch(from_branch, git2::BranchType::Local)
+                    .with_context(|| {
+                        format!(
+                            "branch '{}': source branch '{}' not found",
+                            branch_def.name, from_branch
+                        )
+                    })?;
+                reference.get().peel_to_commit()?.id()
+            }
+        };
+
+        // Create the branch ref at the fork point.
+        let fork_commit = repo.find_commit(fork_oid)?;
+        repo.branch(&branch_def.name, &fork_commit, false)?;
+
+        // Switch HEAD to the new branch to add commits.
+        repo.set_head(&format!("refs/heads/{}", branch_def.name))?;
+        repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))?;
+
+        // Add commits on this branch.
+        for commit_def in &branch_def.commits {
+            for file in &commit_def.files {
+                let file_path = output_dir.join(file);
+                if let Some(parent) = file_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(&file_path, format!("// generated content for {file}\n"))?;
+            }
+
+            if commit_def.merge {
+                create_merge_commit(&repo, output_dir, &commit_def.message)?;
+            } else {
+                add_all_and_commit(&repo, &commit_def.message)?;
+            };
+        }
+
+        // Merge back into target branch if requested.
+        if let Some(merge_into) = &branch_def.merge {
+            let branch_tip = repo.head()?.peel_to_commit()?;
+
+            // Switch to the target branch.
+            repo.set_head(&format!("refs/heads/{}", merge_into))?;
+            repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))?;
+
+            let target_tip = repo.head()?.peel_to_commit()?;
+
+            // Create merge commit with both parents.
+            let mut index = repo.index()?;
+            index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None)?;
+            index.write()?;
+            let tree_id = index.write_tree()?;
+            let tree = repo.find_tree(tree_id)?;
+            let sig = Signature::now("Test", "test@test.com")?;
+
+            repo.commit(
+                Some("HEAD"),
+                &sig,
+                &sig,
+                &format!("Merge branch '{}'", branch_def.name),
+                &tree,
+                &[&target_tip, &branch_tip],
+            )?;
+        }
+    }
+
+    // Restore HEAD to the default branch.
+    if !def.branches.is_empty() {
+        repo.set_head(&format!("refs/heads/{}", default_branch_name))?;
+        repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))?;
+    }
+
+    write_expect(output_dir, def)?;
     Ok(())
 }
 
@@ -483,7 +604,11 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path) -> Result<()> {
         let packages: Vec<String> = (1..=pkg_count).map(|i| format!("pkg-{i:03}")).collect();
 
         if let Some(config) = &def.config {
-            b.set_file(&repo, &resolve_config_filename(config), config.content.as_bytes())?;
+            b.set_file(
+                &repo,
+                &resolve_config_filename(config),
+                config.content.as_bytes(),
+            )?;
         }
 
         for p in &packages {
@@ -520,7 +645,11 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path) -> Result<()> {
     } else {
         // Single package
         if let Some(config) = &def.config {
-            b.set_file(&repo, &resolve_config_filename(config), config.content.as_bytes())?;
+            b.set_file(
+                &repo,
+                &resolve_config_filename(config),
+                config.content.as_bytes(),
+            )?;
         }
         b.set_file(
             &repo,
@@ -567,13 +696,14 @@ fn init_repo(path: &Path, default_branch: Option<&str>) -> Result<Repository> {
 }
 
 fn resolve_config_filename(config: &ConfigDef) -> String {
-    config.filename.clone().unwrap_or_else(|| {
-        match config.format.as_str() {
+    config
+        .filename
+        .clone()
+        .unwrap_or_else(|| match config.format.as_str() {
             "toml" => ".ferrflow.toml".to_string(),
             "json5" => "ferrflow.json5".to_string(),
             _ => "ferrflow.json".to_string(),
-        }
-    })
+        })
 }
 
 fn add_all_and_commit(repo: &Repository, message: &str) -> Result<git2::Oid> {

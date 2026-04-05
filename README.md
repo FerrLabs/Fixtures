@@ -153,6 +153,34 @@ description = "Repo with master as default branch"
 default_branch = "master"  # defaults to git's init.defaultBranch if omitted
 ```
 
+#### Multiple branches
+
+Create branches from specific points and optionally merge them back:
+
+```toml
+[[branches]]
+name = "develop"
+from = "main"           # source branch (defaults to default branch)
+at_commit = 0           # branch from this commit index (-1 = initial, 0+ = commit index)
+merge = "main"          # optional: merge back into this branch when done
+commits = [
+  { message = "feat: new feature on develop", files = ["src/develop.rs"] },
+  { message = "fix: develop bugfix", files = ["src/develop-fix.rs"] },
+]
+
+[[branches]]
+name = "feature/analytics"
+from = "main"           # branches from tip of main if at_commit is omitted
+commits = [
+  { message = "feat: add analytics", files = ["src/analytics.rs"] },
+]
+```
+
+- `from`: source branch name (defaults to `default_branch`)
+- `at_commit`: commit index to branch from (`-1` = initial setup, `0+` = index into `[[commits]]`). If omitted, branches from the tip of `from`.
+- `merge`: if set, creates a merge commit back into the named branch after all commits are added
+- `commits`: list of commits to add on this branch (same format as top-level `[[commits]]`)
+
 #### Merge commits
 
 ```toml
