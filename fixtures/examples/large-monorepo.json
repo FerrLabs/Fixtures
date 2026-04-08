@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "name": "large-monorepo",
+    "description": "Stress test with 50 packages and 500 commits for real-world scale"
+  },
+  "config": {
+    "content": "{}"
+  },
+  "generate": {
+    "packages": 50,
+    "commits": 500,
+    "seed": 12345
+  },
+  "expect": {
+    "check_not_contains": ["error", "panic"]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "name": "tag-template-scoped",
+    "description": "Scoped monorepo tag template using @scope/pkg@v{version} format",
+    "default_branch": "main"
+  },
+  "config": {
+    "content": "{ \"package\": [ { \"name\": \"utils\", \"path\": \"packages/utils\", \"versioned_files\": [{\"path\": \"packages/utils/version.toml\", \"format\": \"toml\"}], \"tagTemplate\": \"@myorg/utils@v{version}\" }, { \"name\": \"core\", \"path\": \"packages/core\", \"versioned_files\": [{\"path\": \"packages/core/version.toml\", \"format\": \"toml\"}], \"tagTemplate\": \"@myorg/core@v{version}\" } ] }"
+  },
+  "packages": [
+    { "name": "utils", "path": "packages/utils", "initial_version": "1.0.0", "tag": "@myorg/utils@v1.0.0" },
+    { "name": "core", "path": "packages/core", "initial_version": "2.0.0", "tag": "@myorg/core@v2.0.0" }
+  ],
+  "commits": [
+    { "message": "feat(utils): add string helpers", "files": ["packages/utils/src/strings.ts"] }
+  ],
+  "expect": {
+    "check_contains": ["utils", "1.1.0"],
+    "check_not_contains": ["Nothing to release"],
+    "packages_released": 1
+  }
+}

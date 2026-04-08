@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "name": "release-mode-pr",
+    "description": "Release commit mode 'pr' creates a pull request instead of committing directly",
+    "default_branch": "main"
+  },
+  "config": {
+    "content": "{ \"release_commit_mode\": \"pr\", \"package\": [ { \"name\": \"app\", \"path\": \".\", \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}] } ] }"
+  },
+  "packages": [
+    { "name": "app", "path": ".", "initial_version": "1.0.0", "tag": "v1.0.0" }
+  ],
+  "commits": [
+    { "message": "feat: add PR release mode", "files": ["src/main.rs"] }
+  ],
+  "expect": {
+    "check_contains": ["app", "1.1.0"],
+    "packages_released": 1
+  }
+}

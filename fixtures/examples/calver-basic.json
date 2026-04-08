@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "name": "calver-basic",
+    "description": "Calendar-based versioning produces date-based version numbers",
+    "default_branch": "main"
+  },
+  "config": {
+    "content": "{ \"versioning\": \"calver\", \"package\": [ { \"name\": \"app\", \"path\": \".\", \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}] } ] }"
+  },
+  "packages": [
+    { "name": "app", "path": ".", "initial_version": "2026.1.0", "tag": "v2026.1.0" }
+  ],
+  "commits": [
+    { "message": "feat: add calendar versioning support", "files": ["src/main.rs"] }
+  ],
+  "expect": {
+    "check_contains": ["app"],
+    "check_not_contains": ["Nothing to release"],
+    "packages_released": 1
+  }
+}
