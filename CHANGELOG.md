@@ -4,6 +4,12 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.15.1] - 2026-04-08
+
+### Bug Fixes
+
+- fix: correct invalid config values in fixture examples (#76)
+
 ## [0.15.0] - 2026-04-08
 
 ### Features
