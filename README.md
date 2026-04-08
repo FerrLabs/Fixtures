@@ -110,10 +110,10 @@ packages_released = 2
 - Run the tool under test (e.g. `ferrflow check`) inside the fixture directory
 - Strip ANSI escape codes from output before matching
 - Validate each field present in `.expect.toml`:
-  - `check_contains`: every string must appear in the output
-  - `check_not_contains`: no string may appear in the output
-  - `output_order`: strings must appear left-to-right by byte offset, with blank lines between consecutive items
-  - `packages_released`: count of packages with version bumps must match
+  - `check_contains`: every string must appear in the output. Empty array = skip this check.
+  - `check_not_contains`: no string may appear in the output. Empty array = skip this check.
+  - `output_order`: strings must appear left-to-right by byte offset, with blank lines between consecutive items. Empty array = skip.
+  - `packages_released`: count of packages with version bumps must match. If absent, skip this check.
 
 See [FerrFlow's `run-tests.sh`](https://github.com/FerrFlow-Org/FerrFlow/blob/main/tests/fixtures/run-tests.sh) for a reference implementation.
 
@@ -199,7 +199,7 @@ The `tag` field on package entries still works for tags on the initial commit.
 }
 ```
 
-Defaults to git's `init.defaultBranch` if omitted.
+If omitted, the branch name depends on libgit2's compiled-in default (usually `master`). Always set `default_branch` explicitly if the branch name matters for your test.
 
 #### Multiple branches
 
@@ -257,7 +257,8 @@ Create branches from specific points and optionally merge them back:
 │       ├── generate.rs        # Fixture generation logic
 │       ├── types.rs            # Definition structs and deserialization
 │       ├── tree.rs            # Incremental tree builder for bulk generation
-│       └── rng.rs             # Deterministic RNG for synthetic commits
+│       ├── rng.rs             # Deterministic RNG for synthetic commits
+│       └── validate.rs        # Definition validation (--validate flag)
 ├── schema/
 │   └── fixture.schema.json    # JSON Schema for fixture definitions
 ├── fixtures/
