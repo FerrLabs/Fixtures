@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "name": "floating-tags-major-bump",
+    "description": "Breaking change creates new floating tag v2 while v1 stays on previous release"
+  },
+  "config": {
+    "content": "{\n  \"workspace\": {\n    \"floating_tags\": true\n  },\n  \"package\": [\n    {\n      \"name\": \"myapp\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "myapp",
+      "path": ".",
+      "initial_version": "1.5.0",
+      "tag": "v1.5.0"
+    }
+  ],
+  "commits": [
+    {
+      "message": "feat!: redesign public API",
+      "files": ["src/api.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["myapp", "2.0.0", "major"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}

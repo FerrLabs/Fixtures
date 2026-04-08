@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "name": "floating-tags-basic",
+    "description": "Floating tag v1 moves to latest minor release within major version"
+  },
+  "config": {
+    "content": "{\n  \"workspace\": {\n    \"floating_tags\": true\n  },\n  \"package\": [\n    {\n      \"name\": \"myapp\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "myapp",
+      "path": ".",
+      "initial_version": "1.2.0",
+      "tag": "v1.2.0"
+    }
+  ],
+  "commits": [
+    {
+      "message": "feat: add new feature",
+      "files": ["src/feature.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["myapp", "1.3.0"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}
