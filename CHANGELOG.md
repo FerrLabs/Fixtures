@@ -4,6 +4,13 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.10.0] - 2026-04-08
+
+### Features
+
+- feat: add release commit mode fixture definitions (#48)
+- feat: add edge case fixture definitions (#46)
+
 ## [0.9.0] - 2026-04-08
 
 ### Features
