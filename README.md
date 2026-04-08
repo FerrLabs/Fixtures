@@ -250,12 +250,19 @@ Create branches from specific points and optionally merge them back:
 ├── action.yml                 # GitHub Action definition
 ├── generator/                 # Rust binary that builds fixture repos
 │   ├── Cargo.toml
-│   └── src/main.rs
+│   └── src/
+│       ├── main.rs            # Entry point
+│       ├── cli.rs             # Argument parsing (--help, --version, etc.)
+│       ├── generate.rs        # Fixture generation logic
+│       ├── types.rs            # Definition structs and deserialization
+│       ├── tree.rs            # Incremental tree builder for bulk generation
+│       └── rng.rs             # Deterministic RNG for synthetic commits
 ├── fixtures/
 │   └── examples/              # Example definitions for reference
 └── .github/
     └── workflows/
-        └── test.yml           # CI for the generator itself
+        ├── test.yml           # CI: fmt, clippy, test, build, generate
+        └── validate.yml       # Reusable workflow for consumer repos
 ```
 
 ## License
