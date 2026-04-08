@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "name": "hooks-per-package",
+    "description": "Monorepo with per-package hooks running in the correct package context"
+  },
+  "config": {
+    "content": "{\n  \"package\": [\n    {\n      \"name\": \"api\",\n      \"path\": \"api\",\n      \"versioned_files\": [{\"path\": \"api/version.toml\", \"format\": \"toml\"}],\n      \"hooks\": {\n        \"preBump\": \"./hooks/pre-bump.sh\"\n      }\n    },\n    {\n      \"name\": \"cli\",\n      \"path\": \"cli\",\n      \"versioned_files\": [{\"path\": \"cli/version.toml\", \"format\": \"toml\"}],\n      \"hooks\": {\n        \"preBump\": \"./hooks/pre-bump.sh\"\n      }\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "api",
+      "path": "api",
+      "initial_version": "1.0.0",
+      "tag": "api@v1.0.0"
+    },
+    {
+      "name": "cli",
+      "path": "cli",
+      "initial_version": "1.0.0",
+      "tag": "cli@v1.0.0"
+    }
+  ],
+  "hooks": [
+    { "path": "hooks/pre-bump.sh", "content": "#!/usr/bin/env bash\necho \"bumping $FERRFLOW_PACKAGE\" >> /tmp/hooks.log\n" }
+  ],
+  "commits": [
+    {
+      "message": "feat(api): add endpoint",
+      "files": ["api/src/handler.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["api", "1.1.0"],
+    "check_not_contains": ["Nothing to release", "cli"]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "name": "hooks-failure-aborts",
+    "description": "A preBump hook that exits non-zero aborts the release"
+  },
+  "config": {
+    "content": "{\n  \"workspace\": {\n    \"hooks\": {\n      \"preBump\": \"./hooks/pre-bump.sh\"\n    }\n  },\n  \"package\": [\n    {\n      \"name\": \"mylib\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "mylib",
+      "path": ".",
+      "initial_version": "1.0.0",
+      "tag": "v1.0.0"
+    }
+  ],
+  "hooks": [
+    { "path": "hooks/pre-bump.sh", "content": "#!/usr/bin/env bash\nexit 1\n" }
+  ],
+  "commits": [
+    {
+      "message": "feat: should not release due to hook failure",
+      "files": ["src/lib.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["mylib", "1.1.0"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}
