@@ -106,7 +106,7 @@ dependencies = [
 
 [[package]]
 name = "generate-fixtures"
-version = "0.3.0"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "chrono",
