@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "name": "edge-empty-repo",
+    "description": "Repo with no commits after initial setup — clean error, no panic"
+  },
+  "config": {
+    "content": "{\n  \"package\": [\n    {\n      \"name\": \"myapp\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "myapp",
+      "path": ".",
+      "initial_version": "0.0.0"
+    }
+  ],
+  "commits": [],
+  "expect": {
+    "check_contains": ["Nothing to release"],
+    "check_not_contains": []
+  }
+}

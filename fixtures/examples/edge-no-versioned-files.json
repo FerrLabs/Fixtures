@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "name": "edge-no-versioned-files",
+    "description": "Package with no versioned files — version tracked via tags only"
+  },
+  "config": {
+    "content": "{\n  \"package\": [\n    {\n      \"name\": \"mylib\",\n      \"path\": \".\",\n      \"versioned_files\": []\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "mylib",
+      "path": ".",
+      "initial_version": "1.0.0",
+      "tag": "v1.0.0"
+    }
+  ],
+  "commits": [
+    {
+      "message": "feat: add feature without versioned files",
+      "files": ["src/lib.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["mylib", "1.1.0"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}
