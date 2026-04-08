@@ -1,10 +1,10 @@
 {
   "meta": {
     "name": "config-nested-path",
-    "description": "Config at a non-root path — verifies --config flag is respected"
+    "description": "Config with a custom filename — verifies non-default config file is used"
   },
   "config": {
-    "filename": "config/ferrflow.json",
+    "filename": "ferrflow.config.json",
     "content": "{\n  \"package\": [\n    {\n      \"name\": \"myapp\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
   },
   "packages": [
