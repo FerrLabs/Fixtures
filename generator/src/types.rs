@@ -152,22 +152,34 @@ mod tests {
 
     #[test]
     fn resolve_default_json() {
-        assert_eq!(resolve_config_filename(&config("json", None)), "ferrflow.json");
+        assert_eq!(
+            resolve_config_filename(&config("json", None)),
+            "ferrflow.json"
+        );
     }
 
     #[test]
     fn resolve_default_toml() {
-        assert_eq!(resolve_config_filename(&config("toml", None)), ".ferrflow.toml");
+        assert_eq!(
+            resolve_config_filename(&config("toml", None)),
+            ".ferrflow.toml"
+        );
     }
 
     #[test]
     fn resolve_default_json5() {
-        assert_eq!(resolve_config_filename(&config("json5", None)), "ferrflow.json5");
+        assert_eq!(
+            resolve_config_filename(&config("json5", None)),
+            "ferrflow.json5"
+        );
     }
 
     #[test]
     fn resolve_unknown_format_falls_back_to_json() {
-        assert_eq!(resolve_config_filename(&config("yaml", None)), "ferrflow.json");
+        assert_eq!(
+            resolve_config_filename(&config("yaml", None)),
+            "ferrflow.json"
+        );
     }
 
     #[test]

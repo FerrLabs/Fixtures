@@ -208,7 +208,9 @@ mod tests {
         let time = Time::new(1_700_000_000, 0);
 
         builder.set_file(&repo, "README.md", b"# hello").unwrap();
-        let oid = builder.commit(&repo, None, "initial commit", &time).unwrap();
+        let oid = builder
+            .commit(&repo, None, "initial commit", &time)
+            .unwrap();
 
         let commit = repo.find_commit(oid).unwrap();
         assert_eq!(commit.message(), Some("initial commit"));

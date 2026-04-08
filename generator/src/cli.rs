@@ -49,17 +49,21 @@ mod tests {
 
     #[test]
     fn long_flags() {
-        let (defs, gen) =
-            parse_args(&args(&["bin", "--definitions", "/tmp/defs", "--output", "/tmp/out"]))
-                .unwrap();
+        let (defs, gen) = parse_args(&args(&[
+            "bin",
+            "--definitions",
+            "/tmp/defs",
+            "--output",
+            "/tmp/out",
+        ]))
+        .unwrap();
         assert_eq!(defs, PathBuf::from("/tmp/defs"));
         assert_eq!(gen, PathBuf::from("/tmp/out"));
     }
 
     #[test]
     fn short_flags() {
-        let (defs, gen) =
-            parse_args(&args(&["bin", "-d", "my/defs", "-o", "my/out"])).unwrap();
+        let (defs, gen) = parse_args(&args(&["bin", "-d", "my/defs", "-o", "my/out"])).unwrap();
         assert_eq!(defs, PathBuf::from("my/defs"));
         assert_eq!(gen, PathBuf::from("my/out"));
     }

@@ -22,6 +22,18 @@ jobs:
           path: generator/target
           key: generator-${{ runner.os }}-${{ hashFiles('generator/Cargo.lock', 'generator/Cargo.toml', 'generator/src/**') }}
 
+      - name: Check formatting
+        working-directory: generator
+        run: cargo fmt --check
+
+      - name: Clippy
+        working-directory: generator
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        working-directory: generator
+        run: cargo test
+
       - name: Build generator
         working-directory: generator
         run: cargo build --release
