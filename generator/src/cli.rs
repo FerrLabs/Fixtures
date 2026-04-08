@@ -1,9 +1,16 @@
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
-pub fn parse_args(args: &[String]) -> Result<(PathBuf, PathBuf)> {
+#[derive(Debug)]
+pub enum Mode {
+    Generate { defs_dir: PathBuf, gen_dir: PathBuf },
+    Validate { defs_dir: PathBuf },
+}
+
+pub fn parse_args(args: &[String]) -> Result<Mode> {
     let mut defs_dir = PathBuf::from("fixtures/definitions");
     let mut gen_dir = PathBuf::from("fixtures/generated");
+    let mut validate = false;
 
     let mut i = 1;
     while i < args.len() {
@@ -24,12 +31,19 @@ pub fn parse_args(args: &[String]) -> Result<(PathBuf, PathBuf)> {
                 i += 1;
                 gen_dir = PathBuf::from(args.get(i).context("missing value for --output")?);
             }
+            "--validate" => {
+                validate = true;
+            }
             other => anyhow::bail!("unknown argument: {other}\n\nRun with --help for usage."),
         }
         i += 1;
     }
 
-    Ok((defs_dir, gen_dir))
+    if validate {
+        Ok(Mode::Validate { defs_dir })
+    } else {
+        Ok(Mode::Generate { defs_dir, gen_dir })
+    }
 }
 
 #[cfg(test)]
@@ -42,14 +56,19 @@ mod tests {
 
     #[test]
     fn defaults_when_no_args() {
-        let (defs, gen) = parse_args(&args(&["bin"])).unwrap();
-        assert_eq!(defs, PathBuf::from("fixtures/definitions"));
-        assert_eq!(gen, PathBuf::from("fixtures/generated"));
+        let mode = parse_args(&args(&["bin"])).unwrap();
+        match mode {
+            Mode::Generate { defs_dir, gen_dir } => {
+                assert_eq!(defs_dir, PathBuf::from("fixtures/definitions"));
+                assert_eq!(gen_dir, PathBuf::from("fixtures/generated"));
+            }
+            _ => panic!("expected Generate mode"),
+        }
     }
 
     #[test]
     fn long_flags() {
-        let (defs, gen) = parse_args(&args(&[
+        let mode = parse_args(&args(&[
             "bin",
             "--definitions",
             "/tmp/defs",
@@ -57,29 +76,71 @@ mod tests {
             "/tmp/out",
         ]))
         .unwrap();
-        assert_eq!(defs, PathBuf::from("/tmp/defs"));
-        assert_eq!(gen, PathBuf::from("/tmp/out"));
+        match mode {
+            Mode::Generate { defs_dir, gen_dir } => {
+                assert_eq!(defs_dir, PathBuf::from("/tmp/defs"));
+                assert_eq!(gen_dir, PathBuf::from("/tmp/out"));
+            }
+            _ => panic!("expected Generate mode"),
+        }
     }
 
     #[test]
     fn short_flags() {
-        let (defs, gen) = parse_args(&args(&["bin", "-d", "my/defs", "-o", "my/out"])).unwrap();
-        assert_eq!(defs, PathBuf::from("my/defs"));
-        assert_eq!(gen, PathBuf::from("my/out"));
+        let mode = parse_args(&args(&["bin", "-d", "my/defs", "-o", "my/out"])).unwrap();
+        match mode {
+            Mode::Generate { defs_dir, gen_dir } => {
+                assert_eq!(defs_dir, PathBuf::from("my/defs"));
+                assert_eq!(gen_dir, PathBuf::from("my/out"));
+            }
+            _ => panic!("expected Generate mode"),
+        }
     }
 
     #[test]
     fn only_definitions_flag() {
-        let (defs, gen) = parse_args(&args(&["bin", "-d", "custom"])).unwrap();
-        assert_eq!(defs, PathBuf::from("custom"));
-        assert_eq!(gen, PathBuf::from("fixtures/generated"));
+        let mode = parse_args(&args(&["bin", "-d", "custom"])).unwrap();
+        match mode {
+            Mode::Generate { defs_dir, gen_dir } => {
+                assert_eq!(defs_dir, PathBuf::from("custom"));
+                assert_eq!(gen_dir, PathBuf::from("fixtures/generated"));
+            }
+            _ => panic!("expected Generate mode"),
+        }
     }
 
     #[test]
     fn only_output_flag() {
-        let (defs, gen) = parse_args(&args(&["bin", "-o", "custom"])).unwrap();
-        assert_eq!(defs, PathBuf::from("fixtures/definitions"));
-        assert_eq!(gen, PathBuf::from("custom"));
+        let mode = parse_args(&args(&["bin", "-o", "custom"])).unwrap();
+        match mode {
+            Mode::Generate { defs_dir, gen_dir } => {
+                assert_eq!(defs_dir, PathBuf::from("fixtures/definitions"));
+                assert_eq!(gen_dir, PathBuf::from("custom"));
+            }
+            _ => panic!("expected Generate mode"),
+        }
+    }
+
+    #[test]
+    fn validate_flag() {
+        let mode = parse_args(&args(&["bin", "--validate", "-d", "my/defs"])).unwrap();
+        match mode {
+            Mode::Validate { defs_dir } => {
+                assert_eq!(defs_dir, PathBuf::from("my/defs"));
+            }
+            _ => panic!("expected Validate mode"),
+        }
+    }
+
+    #[test]
+    fn validate_flag_default_defs() {
+        let mode = parse_args(&args(&["bin", "--validate"])).unwrap();
+        match mode {
+            Mode::Validate { defs_dir } => {
+                assert_eq!(defs_dir, PathBuf::from("fixtures/definitions"));
+            }
+            _ => panic!("expected Validate mode"),
+        }
     }
 
     #[test]
@@ -116,6 +177,7 @@ USAGE:
 OPTIONS:
     -d, --definitions <DIR>    Path to JSON definitions directory [default: fixtures/definitions]
     -o, --output <DIR>         Output directory for generated repos [default: fixtures/generated]
+        --validate             Validate definitions without generating repos
     -h, --help                 Print help information
     -V, --version              Print version",
         env!("CARGO_PKG_VERSION")
