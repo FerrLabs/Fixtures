@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use git2::{FileMode, Oid, Repository, Signature, Time};
 use std::collections::HashMap;
 
@@ -24,7 +24,7 @@ impl TreeNode {
         self.cached_oid = None;
     }
 
-    pub fn insert_blob(&mut self, path: &str, blob_oid: Oid) {
+    pub fn insert_blob(&mut self, path: &str, blob_oid: Oid) -> Result<()> {
         self.invalidate();
         if let Some(slash) = path.find('/') {
             let dir = &path[..slash];
@@ -34,13 +34,16 @@ impl TreeNode {
                 .entry(dir.to_string())
                 .or_insert_with(|| TreeEntry::Tree(TreeNode::new()));
             match child {
-                TreeEntry::Tree(node) => node.insert_blob(rest, blob_oid),
-                _ => panic!("path conflict: {dir} is a blob, not a tree"),
+                TreeEntry::Tree(node) => node.insert_blob(rest, blob_oid)?,
+                _ => {
+                    bail!("path conflict: '{dir}' is a blob, not a tree (while inserting '{path}')")
+                }
             }
         } else {
             self.entries
                 .insert(path.to_string(), TreeEntry::Blob(blob_oid));
         }
+        Ok(())
     }
 
     pub fn write(&mut self, repo: &Repository) -> Result<Oid> {
@@ -80,7 +83,7 @@ impl BulkRepoBuilder {
 
     pub fn set_file(&mut self, repo: &Repository, path: &str, content: &[u8]) -> Result<()> {
         let blob_oid = repo.blob(content)?;
-        self.root.insert_blob(path, blob_oid);
+        self.root.insert_blob(path, blob_oid)?;
         Ok(())
     }
 
@@ -88,7 +91,7 @@ impl BulkRepoBuilder {
         let content = self.dummy_content.entry(path.to_string()).or_default();
         content.extend_from_slice(b"change\n");
         let blob_oid = repo.blob(content)?;
-        self.root.insert_blob(path, blob_oid);
+        self.root.insert_blob(path, blob_oid)?;
         Ok(())
     }
 
@@ -131,7 +134,7 @@ mod tests {
         let blob = repo.blob(b"hello").unwrap();
 
         let mut root = TreeNode::new();
-        root.insert_blob("file.txt", blob);
+        root.insert_blob("file.txt", blob).unwrap();
 
         let tree_oid = root.write(&repo).unwrap();
         let tree = repo.find_tree(tree_oid).unwrap();
@@ -144,7 +147,7 @@ mod tests {
         let blob = repo.blob(b"data").unwrap();
 
         let mut root = TreeNode::new();
-        root.insert_blob("a/b/c.txt", blob);
+        root.insert_blob("a/b/c.txt", blob).unwrap();
 
         let tree_oid = root.write(&repo).unwrap();
         let tree = repo.find_tree(tree_oid).unwrap();
@@ -163,8 +166,8 @@ mod tests {
         let blob2 = repo.blob(b"v2").unwrap();
 
         let mut root = TreeNode::new();
-        root.insert_blob("f.txt", blob1);
-        root.insert_blob("f.txt", blob2);
+        root.insert_blob("f.txt", blob1).unwrap();
+        root.insert_blob("f.txt", blob2).unwrap();
 
         let tree_oid = root.write(&repo).unwrap();
         let tree = repo.find_tree(tree_oid).unwrap();
@@ -180,25 +183,25 @@ mod tests {
         let blob2 = repo.blob(b"second").unwrap();
 
         let mut root = TreeNode::new();
-        root.insert_blob("a.txt", blob1);
+        root.insert_blob("a.txt", blob1).unwrap();
         let oid1 = root.write(&repo).unwrap();
 
-        root.insert_blob("b.txt", blob2);
+        root.insert_blob("b.txt", blob2).unwrap();
         let oid2 = root.write(&repo).unwrap();
 
         assert_ne!(oid1, oid2);
     }
 
     #[test]
-    #[should_panic(expected = "path conflict")]
     fn insert_blob_conflicts_with_existing_blob() {
         let (_tmp, repo) = init_repo();
         let blob = repo.blob(b"x").unwrap();
 
         let mut root = TreeNode::new();
-        root.insert_blob("f", blob);
+        root.insert_blob("f", blob).unwrap();
         // Try to insert a nested path where "f" is already a blob
-        root.insert_blob("f/g.txt", blob);
+        let err = root.insert_blob("f/g.txt", blob).unwrap_err();
+        assert!(err.to_string().contains("path conflict"));
     }
 
     #[test]
