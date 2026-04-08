@@ -21,7 +21,11 @@ fn main() -> Result<()> {
                 std::process::exit(1);
             }
         }
-        cli::Mode::Generate { defs_dir, gen_dir } => {
+        cli::Mode::Generate {
+            defs_dir,
+            gen_dir,
+            verbose,
+        } => {
             if !defs_dir.exists() {
                 anyhow::bail!("{} not found.", defs_dir.display());
             }
@@ -44,9 +48,15 @@ fn main() -> Result<()> {
                 let path = entry.path();
                 let name = path.file_stem().unwrap().to_string_lossy().to_string();
 
-                match generate::generate_fixture(&path, &gen_dir.join(&name)) {
+                let start = std::time::Instant::now();
+                match generate::generate_fixture(&path, &gen_dir.join(&name), verbose) {
                     Ok(()) => {
-                        println!("  ok  {name}");
+                        if verbose {
+                            let elapsed = start.elapsed();
+                            println!("  ok  {name} ({elapsed:.2?})");
+                        } else {
+                            println!("  ok  {name}");
+                        }
                         ok += 1;
                     }
                     Err(e) => {

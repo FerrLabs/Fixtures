@@ -7,21 +7,37 @@ use crate::rng::{rand_message, rand_time, Rng};
 use crate::tree::BulkRepoBuilder;
 use crate::types::{resolve_config_filename, FixtureDef, SerializableExpect};
 
-pub fn generate_fixture(def_path: &Path, output_dir: &Path) -> Result<()> {
+pub fn generate_fixture(def_path: &Path, output_dir: &Path, verbose: bool) -> Result<()> {
     let content =
         fs::read_to_string(def_path).with_context(|| format!("reading {}", def_path.display()))?;
     let def: FixtureDef = serde_json::from_str(&content)
         .with_context(|| format!("parsing {}", def_path.display()))?;
 
+    if verbose {
+        let mode = if def.generate.is_some() {
+            "bulk"
+        } else {
+            "explicit"
+        };
+        eprintln!(
+            "        mode={mode}, packages={}, commits={}, tags={}, branches={}, hooks={}",
+            def.packages.len(),
+            def.commits.len(),
+            def.tags.len(),
+            def.branches.len(),
+            def.hooks.len(),
+        );
+    }
+
     if def.generate.is_some() {
-        generate_bulk(&def, output_dir)
+        generate_bulk(&def, output_dir, verbose)
     } else {
-        generate_explicit(&def, output_dir)
+        generate_explicit(&def, output_dir, verbose)
     }
 }
 
 /// Generate a fixture from explicit [[commits]] definitions.
-fn generate_explicit(def: &FixtureDef, output_dir: &Path) -> Result<()> {
+fn generate_explicit(def: &FixtureDef, output_dir: &Path, verbose: bool) -> Result<()> {
     fs::create_dir_all(output_dir)?;
 
     let repo = init_repo(output_dir, def.meta.default_branch.as_deref())?;
@@ -33,6 +49,9 @@ fn generate_explicit(def: &FixtureDef, output_dir: &Path) -> Result<()> {
 
     if let Some(config) = &def.config {
         let config_filename = resolve_config_filename(config);
+        if verbose {
+            eprintln!("        config -> {config_filename}");
+        }
         fs::write(output_dir.join(&config_filename), &config.content)?;
     }
 
@@ -98,12 +117,19 @@ fn generate_explicit(def: &FixtureDef, output_dir: &Path) -> Result<()> {
         } else {
             add_all_and_commit(&repo, &commit_def.message)?
         };
+        if verbose {
+            let kind = if commit_def.merge { "merge" } else { "commit" };
+            eprintln!("        {kind} [{i}]: {}", commit_def.message);
+        }
         commit_oids.push(oid);
 
         for tag_def in &def.tags {
             if tag_def.at_commit == i as i32 {
                 let tagged_commit = repo.find_commit(oid)?;
                 repo.tag_lightweight(&tag_def.name, tagged_commit.as_object(), false)?;
+                if verbose {
+                    eprintln!("        tag: {}", tag_def.name);
+                }
             }
         }
     }
@@ -141,6 +167,9 @@ fn generate_explicit(def: &FixtureDef, output_dir: &Path) -> Result<()> {
         // Create the branch ref at the fork point.
         let fork_commit = repo.find_commit(fork_oid)?;
         repo.branch(&branch_def.name, &fork_commit, false)?;
+        if verbose {
+            eprintln!("        branch: {} (from {from_branch})", branch_def.name);
+        }
 
         // Switch HEAD to the new branch to add commits.
         repo.set_head(&format!("refs/heads/{}", branch_def.name))?;
@@ -203,7 +232,7 @@ fn generate_explicit(def: &FixtureDef, output_dir: &Path) -> Result<()> {
 }
 
 /// Generate a fixture with bulk synthetic commits (fast incremental tree builder).
-fn generate_bulk(def: &FixtureDef, output_dir: &Path) -> Result<()> {
+fn generate_bulk(def: &FixtureDef, output_dir: &Path, verbose: bool) -> Result<()> {
     let gen = def.generate.as_ref().unwrap();
     let pkg_count = gen.packages;
     let commit_count = gen.commits;
@@ -256,7 +285,9 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path) -> Result<()> {
             let t = rand_time(&mut rng, now);
             parent = b.commit(&repo, Some(parent), &msg, &t)?;
 
-            if commit_count >= 1000 && i % 2000 == 0 {
+            if verbose && i % 500 == 0 {
+                eprintln!("        {i}/{commit_count} commits");
+            } else if commit_count >= 1000 && i % 2000 == 0 {
                 eprintln!("    {}/{commit_count}", i);
             }
         }

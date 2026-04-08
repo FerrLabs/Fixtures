@@ -3,14 +3,21 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum Mode {
-    Generate { defs_dir: PathBuf, gen_dir: PathBuf },
-    Validate { defs_dir: PathBuf },
+    Generate {
+        defs_dir: PathBuf,
+        gen_dir: PathBuf,
+        verbose: bool,
+    },
+    Validate {
+        defs_dir: PathBuf,
+    },
 }
 
 pub fn parse_args(args: &[String]) -> Result<Mode> {
     let mut defs_dir = PathBuf::from("fixtures/definitions");
     let mut gen_dir = PathBuf::from("fixtures/generated");
     let mut validate = false;
+    let mut verbose = false;
 
     let mut i = 1;
     while i < args.len() {
@@ -34,6 +41,9 @@ pub fn parse_args(args: &[String]) -> Result<Mode> {
             "--validate" => {
                 validate = true;
             }
+            "--verbose" | "-v" => {
+                verbose = true;
+            }
             other => anyhow::bail!("unknown argument: {other}\n\nRun with --help for usage."),
         }
         i += 1;
@@ -42,7 +52,11 @@ pub fn parse_args(args: &[String]) -> Result<Mode> {
     if validate {
         Ok(Mode::Validate { defs_dir })
     } else {
-        Ok(Mode::Generate { defs_dir, gen_dir })
+        Ok(Mode::Generate {
+            defs_dir,
+            gen_dir,
+            verbose,
+        })
     }
 }
 
@@ -58,9 +72,14 @@ mod tests {
     fn defaults_when_no_args() {
         let mode = parse_args(&args(&["bin"])).unwrap();
         match mode {
-            Mode::Generate { defs_dir, gen_dir } => {
+            Mode::Generate {
+                defs_dir,
+                gen_dir,
+                verbose,
+            } => {
                 assert_eq!(defs_dir, PathBuf::from("fixtures/definitions"));
                 assert_eq!(gen_dir, PathBuf::from("fixtures/generated"));
+                assert!(!verbose);
             }
             _ => panic!("expected Generate mode"),
         }
@@ -77,7 +96,9 @@ mod tests {
         ]))
         .unwrap();
         match mode {
-            Mode::Generate { defs_dir, gen_dir } => {
+            Mode::Generate {
+                defs_dir, gen_dir, ..
+            } => {
                 assert_eq!(defs_dir, PathBuf::from("/tmp/defs"));
                 assert_eq!(gen_dir, PathBuf::from("/tmp/out"));
             }
@@ -89,7 +110,9 @@ mod tests {
     fn short_flags() {
         let mode = parse_args(&args(&["bin", "-d", "my/defs", "-o", "my/out"])).unwrap();
         match mode {
-            Mode::Generate { defs_dir, gen_dir } => {
+            Mode::Generate {
+                defs_dir, gen_dir, ..
+            } => {
                 assert_eq!(defs_dir, PathBuf::from("my/defs"));
                 assert_eq!(gen_dir, PathBuf::from("my/out"));
             }
@@ -101,7 +124,9 @@ mod tests {
     fn only_definitions_flag() {
         let mode = parse_args(&args(&["bin", "-d", "custom"])).unwrap();
         match mode {
-            Mode::Generate { defs_dir, gen_dir } => {
+            Mode::Generate {
+                defs_dir, gen_dir, ..
+            } => {
                 assert_eq!(defs_dir, PathBuf::from("custom"));
                 assert_eq!(gen_dir, PathBuf::from("fixtures/generated"));
             }
@@ -113,10 +138,30 @@ mod tests {
     fn only_output_flag() {
         let mode = parse_args(&args(&["bin", "-o", "custom"])).unwrap();
         match mode {
-            Mode::Generate { defs_dir, gen_dir } => {
+            Mode::Generate {
+                defs_dir, gen_dir, ..
+            } => {
                 assert_eq!(defs_dir, PathBuf::from("fixtures/definitions"));
                 assert_eq!(gen_dir, PathBuf::from("custom"));
             }
+            _ => panic!("expected Generate mode"),
+        }
+    }
+
+    #[test]
+    fn verbose_flag() {
+        let mode = parse_args(&args(&["bin", "--verbose"])).unwrap();
+        match mode {
+            Mode::Generate { verbose, .. } => assert!(verbose),
+            _ => panic!("expected Generate mode"),
+        }
+    }
+
+    #[test]
+    fn verbose_short_flag() {
+        let mode = parse_args(&args(&["bin", "-v"])).unwrap();
+        match mode {
+            Mode::Generate { verbose, .. } => assert!(verbose),
             _ => panic!("expected Generate mode"),
         }
     }
@@ -178,6 +223,7 @@ OPTIONS:
     -d, --definitions <DIR>    Path to JSON definitions directory [default: fixtures/definitions]
     -o, --output <DIR>         Output directory for generated repos [default: fixtures/generated]
         --validate             Validate definitions without generating repos
+    -v, --verbose              Print detailed output during generation
     -h, --help                 Print help information
     -V, --version              Print version",
         env!("CARGO_PKG_VERSION")
