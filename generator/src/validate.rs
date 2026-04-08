@@ -41,6 +41,10 @@ pub fn validate_definitions(defs_dir: &Path) -> Result<bool> {
     Ok(valid == total)
 }
 
+fn has_traversal(path: &str) -> bool {
+    std::path::Path::new(path).is_absolute() || path.split(['/', '\\']).any(|c| c == "..")
+}
+
 fn validate_single(path: &Path) -> std::result::Result<Vec<String>, Vec<String>> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("reading {}", path.display()))
@@ -120,6 +124,51 @@ fn validate_single(path: &Path) -> std::result::Result<Vec<String>, Vec<String>>
                     "branch '{}': merge target '{}' does not reference a known branch",
                     branch.name, merge_into
                 ));
+            }
+        }
+    }
+
+    // Validate paths for directory traversal
+    for (i, commit) in def.commits.iter().enumerate() {
+        for file in &commit.files {
+            if has_traversal(file) {
+                errors.push(format!(
+                    "commits[{i}].files: path '{}' contains directory traversal",
+                    file
+                ));
+            }
+        }
+    }
+
+    for hook in &def.hooks {
+        if has_traversal(&hook.path) {
+            errors.push(format!(
+                "hooks: path '{}' contains directory traversal",
+                hook.path
+            ));
+        }
+    }
+
+    if let Some(config) = &def.config {
+        if let Some(filename) = &config.filename {
+            if has_traversal(filename) {
+                errors.push(format!(
+                    "config.filename: '{}' contains directory traversal",
+                    filename
+                ));
+            }
+        }
+    }
+
+    for branch in &def.branches {
+        for (j, commit) in branch.commits.iter().enumerate() {
+            for file in &commit.files {
+                if has_traversal(file) {
+                    errors.push(format!(
+                        "branches['{}']/commits[{j}].files: path '{}' contains directory traversal",
+                        branch.name, file
+                    ));
+                }
             }
         }
     }
@@ -206,6 +255,50 @@ mod tests {
             r#"{"meta":{"name":"t","description":"d"},"branches":[{"name":"feat","from":"nonexistent"}]}"#,
         );
         assert!(!validate_definitions(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn hook_path_traversal() {
+        let tmp = TempDir::new().unwrap();
+        write_def(
+            tmp.path(),
+            "traversal",
+            r#"{"meta":{"name":"t","description":"d"},"hooks":[{"path":"../../etc/passwd","content":"x"}]}"#,
+        );
+        assert!(!validate_definitions(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn commit_file_path_traversal() {
+        let tmp = TempDir::new().unwrap();
+        write_def(
+            tmp.path(),
+            "traversal",
+            r#"{"meta":{"name":"t","description":"d"},"commits":[{"message":"feat: x","files":["../outside.txt"]}]}"#,
+        );
+        assert!(!validate_definitions(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn config_filename_traversal() {
+        let tmp = TempDir::new().unwrap();
+        write_def(
+            tmp.path(),
+            "traversal",
+            r#"{"meta":{"name":"t","description":"d"},"config":{"content":"{}","filename":"../../evil.json"}}"#,
+        );
+        assert!(!validate_definitions(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn valid_nested_paths_ok() {
+        let tmp = TempDir::new().unwrap();
+        write_def(
+            tmp.path(),
+            "ok",
+            r#"{"meta":{"name":"t","description":"d"},"commits":[{"message":"feat: x","files":["src/deep/file.rs"]}],"hooks":[{"path":"hooks/pre.sh","content":"x"}]}"#,
+        );
+        assert!(validate_definitions(tmp.path()).unwrap());
     }
 
     #[test]
