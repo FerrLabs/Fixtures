@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "name": "prerelease-promote-stable",
+    "description": "Promoting from rc pre-release to stable removes the pre-release suffix"
+  },
+  "config": {
+    "content": "{\n  \"workspace\": {\n    \"branches\": [\n      {\n        \"name\": \"main\",\n        \"channel\": true\n      }\n    ]\n  },\n  \"package\": [\n    {\n      \"name\": \"mylib\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "mylib",
+      "path": ".",
+      "initial_version": "2.0.0-rc.3"
+    }
+  ],
+  "tags": [
+    {
+      "name": "v2.0.0-rc.3",
+      "at_commit": -1
+    }
+  ],
+  "commits": [
+    {
+      "message": "chore: prepare stable release",
+      "files": ["src/lib.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["mylib", "2.0.0"],
+    "check_not_contains": ["Nothing to release", "rc"]
+  }
+}

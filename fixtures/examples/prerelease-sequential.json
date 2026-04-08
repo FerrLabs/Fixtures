@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "name": "prerelease-sequential",
+    "description": "Sequential pre-release identifiers increment correctly from existing alpha tag"
+  },
+  "config": {
+    "content": "{\n  \"workspace\": {\n    \"branches\": [\n      {\n        \"name\": \"main\",\n        \"channel\": \"alpha\",\n        \"prereleaseIdentifier\": \"increment\"\n      }\n    ]\n  },\n  \"package\": [\n    {\n      \"name\": \"mylib\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "mylib",
+      "path": ".",
+      "initial_version": "1.1.0-alpha.0"
+    }
+  ],
+  "tags": [
+    {
+      "name": "v1.1.0-alpha.0",
+      "at_commit": -1
+    }
+  ],
+  "commits": [
+    {
+      "message": "fix: patch on alpha channel",
+      "files": ["src/fix.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["mylib", "alpha.1"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}

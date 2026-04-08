@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "name": "prerelease-breaking",
+    "description": "Breaking change on a beta pre-release channel bumps major with beta suffix"
+  },
+  "config": {
+    "content": "{\n  \"workspace\": {\n    \"branches\": [\n      {\n        \"name\": \"main\",\n        \"channel\": \"beta\",\n        \"prereleaseIdentifier\": \"increment\"\n      }\n    ]\n  },\n  \"package\": [\n    {\n      \"name\": \"mylib\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "mylib",
+      "path": ".",
+      "initial_version": "1.0.0-beta.2"
+    }
+  ],
+  "tags": [
+    {
+      "name": "v1.0.0-beta.2",
+      "at_commit": -1
+    }
+  ],
+  "commits": [
+    {
+      "message": "feat!: redesign API surface",
+      "files": ["src/api.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["mylib", "major"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}
