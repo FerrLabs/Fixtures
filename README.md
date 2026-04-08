@@ -85,7 +85,50 @@ check_not_contains = ["Nothing to release"]
 packages_released = 2
 ```
 
-The `[expect]` section is ignored by the generator — it's metadata for the consumer's test runner.
+The generator copies the `[expect]` section into a `.expect.toml` file at the root of each generated repo. Consumer repos (FerrFlow, Benchmarks) use this file to validate their test runners against expected output.
+
+### `.expect.toml` contract
+
+The generated `.expect.toml` contains the fixture's `description` (from `[meta]`) plus the fields from `[expect]`. All fields except `description` are optional.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `description` | string | Human-readable description of the fixture scenario. Copied from `meta.description`. |
+| `check_contains` | string[] | Strings that **must** appear in the consumer's output (case-sensitive, fixed-string match). |
+| `check_not_contains` | string[] | Strings that **must not** appear in the consumer's output. |
+| `output_order` | string[] | Strings that must appear in order. Consumer runners should also verify blank-line separation between consecutive items. |
+| `packages_released` | integer | Expected number of packages released. |
+
+Example generated file:
+
+```toml
+description = "Two packages with independent version bumps"
+
+check_contains = [
+    "core",
+    "0.2.0",
+    "cli",
+    "0.1.1",
+]
+
+check_not_contains = [
+    "Nothing to release",
+]
+
+packages_released = 2
+```
+
+**Consumer responsibilities:**
+
+- Run the tool under test (e.g. `ferrflow check`) inside the fixture directory
+- Strip ANSI escape codes from output before matching
+- Validate each field present in `.expect.toml`:
+  - `check_contains`: every string must appear in the output
+  - `check_not_contains`: no string may appear in the output
+  - `output_order`: strings must appear left-to-right by byte offset, with blank lines between consecutive items
+  - `packages_released`: count of packages with version bumps must match
+
+See [FerrFlow's `run-tests.sh`](https://github.com/FerrFlow-Org/FerrFlow/blob/main/tests/fixtures/run-tests.sh) for a reference implementation.
 
 ### Bulk generation
 
