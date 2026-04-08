@@ -31,5 +31,9 @@ jobs:
           ./generator/target/release/generate-fixtures \
             --definitions fixtures/examples \
             --output /tmp/generated
-          test -d /tmp/generated
-          echo "Example fixtures generated successfully"
+          count=$(find /tmp/generated -mindepth 1 -maxdepth 1 -type d | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "Error: no fixtures were generated"
+            exit 1
+          fi
+          echo "$count fixture(s) generated successfully"
