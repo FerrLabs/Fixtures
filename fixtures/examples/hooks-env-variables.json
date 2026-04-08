@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "name": "hooks-env-variables",
+    "description": "Hooks receive correct environment variables from FerrFlow"
+  },
+  "config": {
+    "content": "{\n  \"workspace\": {\n    \"hooks\": {\n      \"postBump\": \"./hooks/post-bump.sh\"\n    }\n  },\n  \"package\": [\n    {\n      \"name\": \"mylib\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "mylib",
+      "path": ".",
+      "initial_version": "1.0.0",
+      "tag": "v1.0.0"
+    }
+  ],
+  "hooks": [
+    { "path": "hooks/post-bump.sh", "content": "#!/usr/bin/env bash\necho \"version=$FERRFLOW_VERSION package=$FERRFLOW_PACKAGE\" >> /tmp/env.log\n" }
+  ],
+  "commits": [
+    {
+      "message": "feat: add feature for env test",
+      "files": ["src/lib.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["mylib", "1.1.0"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}
