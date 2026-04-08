@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "name": "edge-initial-release",
+    "description": "No tags exist at all — first release ever uses initial version from config"
+  },
+  "config": {
+    "content": "{\n  \"package\": [\n    {\n      \"name\": \"mylib\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "mylib",
+      "path": ".",
+      "initial_version": "0.1.0"
+    }
+  ],
+  "commits": [
+    {
+      "message": "feat: initial feature",
+      "files": ["src/lib.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["mylib"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}

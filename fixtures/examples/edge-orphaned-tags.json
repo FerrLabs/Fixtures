@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "name": "edge-orphaned-tags",
+    "description": "Tags that exist but don't match any package path — handled gracefully"
+  },
+  "config": {
+    "content": "{\n  \"workspace\": {\n    \"orphanedTagStrategy\": \"warn\"\n  },\n  \"package\": [\n    {\n      \"name\": \"mylib\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "mylib",
+      "path": ".",
+      "initial_version": "1.0.0",
+      "tag": "v1.0.0"
+    }
+  ],
+  "tags": [
+    {
+      "name": "unrelated-tag-v2.0.0",
+      "at_commit": -1
+    }
+  ],
+  "commits": [
+    {
+      "message": "feat: add feature",
+      "files": ["src/lib.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["mylib", "1.1.0"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}

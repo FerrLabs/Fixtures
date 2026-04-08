@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "name": "edge-duplicate-tags",
+    "description": "Two tags pointing to the same commit — correct resolution without errors"
+  },
+  "config": {
+    "content": "{\n  \"package\": [\n    {\n      \"name\": \"mylib\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "mylib",
+      "path": ".",
+      "initial_version": "1.0.0"
+    }
+  ],
+  "tags": [
+    {
+      "name": "v1.0.0",
+      "at_commit": -1
+    },
+    {
+      "name": "release-1.0.0",
+      "at_commit": -1
+    }
+  ],
+  "commits": [
+    {
+      "message": "feat: add feature after duplicate tags",
+      "files": ["src/lib.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["mylib", "1.1.0"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}

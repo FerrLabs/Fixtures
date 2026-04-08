@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "name": "edge-recover-missed",
+    "description": "recoverMissedReleases enabled — gap of multiple unreleased versions handled correctly"
+  },
+  "config": {
+    "content": "{\n  \"workspace\": {\n    \"recoverMissedReleases\": true\n  },\n  \"package\": [\n    {\n      \"name\": \"mylib\",\n      \"path\": \".\",\n      \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}]\n    }\n  ]\n}\n"
+  },
+  "packages": [
+    {
+      "name": "mylib",
+      "path": ".",
+      "initial_version": "1.0.0",
+      "tag": "v1.0.0"
+    }
+  ],
+  "commits": [
+    {
+      "message": "feat: first missed feature",
+      "files": ["src/first.rs"]
+    },
+    {
+      "message": "feat!: breaking change",
+      "files": ["src/breaking.rs"]
+    },
+    {
+      "message": "fix: patch after breaking",
+      "files": ["src/fix.rs"]
+    }
+  ],
+  "expect": {
+    "check_contains": ["mylib"],
+    "check_not_contains": ["Nothing to release"]
+  }
+}
