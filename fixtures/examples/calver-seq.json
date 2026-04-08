@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "name": "calver-seq",
+    "description": "Calendar-sequential versioning uses YYYY.MM.N where N increments per release",
+    "default_branch": "main"
+  },
+  "config": {
+    "content": "{ \"versioning\": \"calver-seq\", \"package\": [ { \"name\": \"app\", \"path\": \".\", \"versioned_files\": [{\"path\": \"version.toml\", \"format\": \"toml\"}] } ] }"
+  },
+  "packages": [
+    { "name": "app", "path": ".", "initial_version": "2026.04.1", "tag": "v2026.04.1" }
+  ],
+  "commits": [
+    { "message": "feat: add sequential calver", "files": ["src/main.rs"] }
+  ],
+  "expect": {
+    "check_contains": ["app"],
+    "check_not_contains": ["Nothing to release"],
+    "packages_released": 1
+  }
+}
