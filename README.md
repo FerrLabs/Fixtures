@@ -271,4 +271,4 @@ Create branches from specific points and optionally merge them back:
 
 ## License
 
-MIT
+[MPL-2.0](LICENSE)
