@@ -31,14 +31,14 @@ jobs:
 
       - name: Generate fixtures
         id: fixtures
-        uses: FerrFlow-Org/Fixtures@v0
+        uses: FerrLabs/Fixtures@v0
         with:
           definitions: ${{ inputs.definitions }}
 
       - name: Checkout FerrFlow
         uses: actions/checkout@v4
         with:
-          repository: FerrFlow-Org/FerrFlow
+          repository: FerrLabs/FerrFlow
           ref: ${{ inputs.ferrflow-ref }}
           path: __ferrflow__
 

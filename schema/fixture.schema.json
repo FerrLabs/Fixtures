@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/FerrFlow-Org/Fixtures/main/schema/fixture.schema.json",
+  "$id": "https://raw.githubusercontent.com/FerrLabs/Fixtures/main/schema/fixture.schema.json",
   "title": "FerrFlow Fixture Definition",
   "description": "Declarative definition for generating a git fixture repository.",
   "type": "object",

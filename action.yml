@@ -25,7 +25,7 @@ runs:
     - name: Checkout Fixtures
       uses: actions/checkout@v4
       with:
-        repository: FerrFlow-Org/Fixtures
+        repository: FerrLabs/Fixtures
         path: __fixtures__
 
     - name: Cache generator build

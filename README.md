@@ -1,6 +1,6 @@
 # FerrFlow Fixtures
 
-Reusable GitHub Action and CLI tool for generating git fixture repos from declarative JSON definitions. Used by [FerrFlow](https://github.com/FerrFlow-Org/FerrFlow) for integration tests and [Benchmarks](https://github.com/FerrFlow-Org/Benchmarks) for performance testing.
+Reusable GitHub Action and CLI tool for generating git fixture repos from declarative JSON definitions. Used by [FerrFlow](https://github.com/FerrLabs/FerrFlow) for integration tests and [Benchmarks](https://github.com/FerrLabs/Benchmarks) for performance testing.
 
 Fixtures is a pure generator — it builds repos from JSON definitions but does not run any tests. Each consumer repo (FerrFlow, Benchmarks, etc.) owns its own definitions and test runner.
 
@@ -9,7 +9,7 @@ Fixtures is a pure generator — it builds repos from JSON definitions but does 
 ```yaml
 - name: Generate fixture repos
   id: fixtures
-  uses: FerrFlow-Org/Fixtures@v0
+  uses: FerrLabs/Fixtures@v0
   with:
     definitions: tests/fixtures/definitions
 
@@ -48,7 +48,7 @@ Each `.json` file describes a git repo scenario. Add `$schema` for editor autoco
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/FerrFlow-Org/Fixtures/main/schema/fixture.schema.json",
+  "$schema": "https://raw.githubusercontent.com/FerrLabs/Fixtures/main/schema/fixture.schema.json",
   "meta": {
     "name": "monorepo-two-packages",
     "description": "Two packages both touched in the same commit get independent bumps"
@@ -115,7 +115,7 @@ packages_released = 2
   - `output_order`: strings must appear left-to-right by byte offset, with blank lines between consecutive items. Empty array = skip.
   - `packages_released`: count of packages with version bumps must match. If absent, skip this check.
 
-See [FerrFlow's `run-tests.sh`](https://github.com/FerrFlow-Org/FerrFlow/blob/main/tests/fixtures/run-tests.sh) for a reference implementation.
+See [FerrFlow's `run-tests.sh`](https://github.com/FerrLabs/FerrFlow/blob/main/tests/fixtures/run-tests.sh) for a reference implementation.
 
 ### Bulk generation
 
