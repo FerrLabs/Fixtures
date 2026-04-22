@@ -1,5 +1,7 @@
 # FerrFlow Fixtures
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/FerrLabs/Fixtures/badge)](https://scorecard.dev/viewer/?uri=github.com/FerrLabs/Fixtures)
+
 Reusable GitHub Action and CLI tool for generating git fixture repos from declarative JSON definitions. Used by [FerrFlow](https://github.com/FerrLabs/FerrFlow) for integration tests and [Benchmarks](https://github.com/FerrLabs/Benchmarks) for performance testing.
 
 Fixtures is a pure generator — it builds repos from JSON definitions but does not run any tests. Each consumer repo (FerrFlow, Benchmarks, etc.) owns its own definitions and test runner.
