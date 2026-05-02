@@ -44,7 +44,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@nightly
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: __ferrflow__/target
           key: ferrflow-${{ runner.os }}-${{ inputs.ferrflow-ref }}-${{ hashFiles('__ferrflow__/Cargo.lock') }}
