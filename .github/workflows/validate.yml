@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout caller repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate fixtures
         id: fixtures
@@ -36,7 +36,7 @@ jobs:
           definitions: ${{ inputs.definitions }}
 
       - name: Checkout FerrFlow
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: FerrLabs/FerrFlow
           ref: ${{ inputs.ferrflow-ref }}
