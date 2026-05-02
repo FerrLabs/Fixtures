@@ -31,7 +31,7 @@ jobs:
 
       - name: Generate fixtures
         id: fixtures
-        uses: FerrLabs/Fixtures@v0
+        uses: FerrLabs/Fixtures@v1
         with:
           definitions: ${{ inputs.definitions }}
 
