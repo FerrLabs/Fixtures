@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! git diff --cached --name-only --diff-filter=ACM | grep -qE '\.rs$'; then
+  exit 0
+fi
+
+cd generator
+echo "==> cargo fmt --check"
+cargo fmt --all -- --check
+echo "==> cargo clippy"
+cargo clippy --all-targets -- -D warnings
