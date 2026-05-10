@@ -2,5 +2,15 @@
 set -euo pipefail
 
 cd generator
+
+echo "==> cargo fmt --check"
+cargo fmt --all -- --check
+
+echo "==> cargo clippy"
+cargo clippy -- -D warnings
+
 echo "==> cargo test"
 cargo test --all-features
+
+echo "==> cargo build --release"
+cargo build --release
