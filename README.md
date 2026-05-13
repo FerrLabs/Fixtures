@@ -11,7 +11,7 @@ Fixtures is a pure generator — it builds repos from JSON definitions but does 
 ```yaml
 - name: Generate fixture repos
   id: fixtures
-  uses: FerrLabs/Fixtures@v0
+  uses: FerrLabs/Fixtures@v1 # or pin to a commit SHA, e.g. FerrLabs/Fixtures@8a78f82cc8f5df76c4f5f71a7a0ced47e6d82253
   with:
     definitions: tests/fixtures/definitions
 
