@@ -60,6 +60,25 @@ pub fn parse_args(args: &[String]) -> Result<Mode> {
     }
 }
 
+fn print_help() {
+    println!(
+        "generate-fixtures {}
+Generate git fixture repos from JSON definitions.
+
+USAGE:
+    generate-fixtures [OPTIONS]
+
+OPTIONS:
+    -d, --definitions <DIR>    Path to JSON definitions directory [default: fixtures/definitions]
+    -o, --output <DIR>         Output directory for generated repos [default: fixtures/generated]
+        --validate             Validate definitions without generating repos
+    -v, --verbose              Print detailed output during generation
+    -h, --help                 Print help information
+    -V, --version              Print version",
+        env!("CARGO_PKG_VERSION")
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -209,23 +228,4 @@ mod tests {
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("unknown argument"), "unexpected error: {msg}");
     }
-}
-
-fn print_help() {
-    println!(
-        "generate-fixtures {}
-Generate git fixture repos from JSON definitions.
-
-USAGE:
-    generate-fixtures [OPTIONS]
-
-OPTIONS:
-    -d, --definitions <DIR>    Path to JSON definitions directory [default: fixtures/definitions]
-    -o, --output <DIR>         Output directory for generated repos [default: fixtures/generated]
-        --validate             Validate definitions without generating repos
-    -v, --verbose              Print detailed output during generation
-    -h, --help                 Print help information
-    -V, --version              Print version",
-        env!("CARGO_PKG_VERSION")
-    );
 }

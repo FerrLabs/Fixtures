@@ -28,7 +28,7 @@ jobs:
 
       - name: Clippy
         working-directory: generator
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: Run tests
         working-directory: generator
