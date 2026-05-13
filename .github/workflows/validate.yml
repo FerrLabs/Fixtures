@@ -24,7 +24,7 @@ permissions:
 jobs:
   validate:
     name: Generate & Test
-    runs-on: ferrlabs-k8s
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout caller repo
         uses: actions/checkout@v4

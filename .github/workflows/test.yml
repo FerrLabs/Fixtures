@@ -11,7 +11,7 @@ permissions:
 jobs:
   build:
     name: Build & Generate
-    runs-on: ferrlabs-k8s
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
