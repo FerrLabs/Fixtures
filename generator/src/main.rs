@@ -6,7 +6,9 @@ mod types;
 mod validate;
 
 use anyhow::Result;
+use rayon::prelude::*;
 use std::fs;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
@@ -42,12 +44,18 @@ fn main() -> Result<()> {
             entries.sort_by_key(|e| e.path());
 
             let total = entries.len();
-            let mut ok = 0;
-
-            for entry in &entries {
+            // Each fixture definition produces an independent output
+            // directory under gen_dir/<name>, so we can fan out across
+            // CPU cores. Rayon's default global pool sizes itself to
+            // the host (one thread per logical core), which on a CI
+            // runner with ~6 fixtures cuts wall-time roughly in half.
+            // git2 is safe to use concurrently as long as each thread
+            // builds its own Repository handle, which is exactly what
+            // generate_fixture does.
+            let ok = AtomicUsize::new(0);
+            entries.par_iter().for_each(|entry| {
                 let path = entry.path();
                 let name = path.file_stem().unwrap().to_string_lossy().to_string();
-
                 let start = std::time::Instant::now();
                 match generate::generate_fixture(&path, &gen_dir.join(&name), verbose) {
                     Ok(()) => {
@@ -57,14 +65,15 @@ fn main() -> Result<()> {
                         } else {
                             println!("  ok  {name}");
                         }
-                        ok += 1;
+                        ok.fetch_add(1, Ordering::Relaxed);
                     }
                     Err(e) => {
                         eprintln!("  ERR {name}: {e}");
                     }
                 }
-            }
+            });
 
+            let ok = ok.load(Ordering::Relaxed);
             println!("\n{ok}/{total} fixtures generated");
             if ok < total {
                 std::process::exit(1);
