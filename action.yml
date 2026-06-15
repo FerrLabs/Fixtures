@@ -1,6 +1,6 @@
 name: 'FerrFlow Fixtures'
 description: 'Generate git fixture repos from declarative JSON definitions'
-author: 'FerrFlow-Org'
+author: 'FerrLabs'
 branding:
   icon: 'box'
   color: 'orange'
