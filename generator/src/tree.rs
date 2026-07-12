@@ -218,7 +218,7 @@ mod tests {
             .unwrap();
 
         let commit = repo.find_commit(oid).unwrap();
-        assert_eq!(commit.message(), Some("initial commit"));
+        assert_eq!(commit.message().unwrap(), "initial commit");
 
         let tree = commit.tree().unwrap();
         assert!(tree.get_name("README.md").is_some());
