@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "name": "depends-on-graph",
+    "description": "Dependency DAG (core spine + leaf apps) exercising the version cascade"
+  },
+  "generate": {
+    "packages": 12,
+    "commits": 40,
+    "seed": 20250714,
+    "graph": true
+  },
+  "expect": {
+    "check_not_contains": ["error", "panic"]
+  }
+}

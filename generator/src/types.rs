@@ -94,6 +94,8 @@ pub struct GenerateDef {
     pub commits: usize,
     #[serde(default = "default_gen_seed")]
     pub seed: u64,
+    #[serde(default)]
+    pub graph: bool,
 }
 
 fn default_gen_packages() -> usize {
