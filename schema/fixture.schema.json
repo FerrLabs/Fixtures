@@ -183,6 +183,11 @@
           "minimum": 1,
           "default": 42,
           "description": "RNG seed for deterministic output."
+        },
+        "graph": {
+          "type": "boolean",
+          "default": false,
+          "description": "Wire the generated packages into a dependency DAG (a core spine plus leaves that dependsOn cores) and bias commits toward core packages so the version cascade fires. Only meaningful when packages > 1; the generator writes a populated ferrflow.json with the dependsOn edges."
         }
       }
     },

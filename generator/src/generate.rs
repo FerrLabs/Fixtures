@@ -252,8 +252,16 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path, verbose: bool) -> Result<(
     if is_mono {
         // Monorepo: generate N packages
         let packages: Vec<String> = (1..=pkg_count).map(|i| format!("pkg-{i:03}")).collect();
+        let core_count = (pkg_count / 5).max(1);
 
-        if let Some(config) = &def.config {
+        if gen.graph {
+            let deps = build_dependency_edges(pkg_count, core_count, &mut rng);
+            b.set_file(
+                &repo,
+                "ferrflow.json",
+                graph_config(&packages, &deps).as_bytes(),
+            )?;
+        } else if let Some(config) = &def.config {
             b.set_file(
                 &repo,
                 &resolve_config_filename(config),
@@ -280,7 +288,12 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path, verbose: bool) -> Result<(
 
         let mut parent = oid;
         for i in 1..=commit_count {
-            let pkg = &packages[rng.usize(pkg_count)];
+            let idx = if gen.graph && rng.usize(10) < 4 {
+                rng.usize(core_count)
+            } else {
+                rng.usize(pkg_count)
+            };
+            let pkg = &packages[idx];
             let path = format!("packages/{pkg}/dummy.txt");
             b.append_dummy(&repo, &path)?;
 
@@ -330,6 +343,49 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path, verbose: bool) -> Result<(
     repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))?;
     write_expect(output_dir, def)?;
     Ok(())
+}
+
+/// Wire `pkg_count` packages into a DAG: the first `core_count` packages form a
+/// spine (each depends on the previous), and every remaining leaf depends on 1-3
+/// core packages. Deterministic for a given `rng`. Returns per-package dependency
+/// indices into the package list.
+fn build_dependency_edges(pkg_count: usize, core_count: usize, rng: &mut Rng) -> Vec<Vec<usize>> {
+    let mut deps = vec![Vec::new(); pkg_count];
+    for (i, edges) in deps.iter_mut().enumerate().take(core_count).skip(1) {
+        edges.push(i - 1);
+    }
+    let max_deps = 3.min(core_count);
+    for edges in deps.iter_mut().skip(core_count) {
+        let n = 1 + rng.usize(max_deps);
+        let mut chosen = std::collections::BTreeSet::new();
+        while chosen.len() < n {
+            chosen.insert(rng.usize(core_count));
+        }
+        *edges = chosen.into_iter().collect();
+    }
+    deps
+}
+
+/// Render a ferrflow config wiring each package to its package.json and emitting
+/// `dependsOn` edges for packages that have dependencies.
+fn graph_config(packages: &[String], deps: &[Vec<usize>]) -> String {
+    let entries: Vec<String> = packages
+        .iter()
+        .zip(deps)
+        .map(|(name, edges)| {
+            let mut entry = format!(
+                "{{\"name\":\"{name}\",\"path\":\"packages/{name}\",\"versioned_files\":[{{\"path\":\"packages/{name}/package.json\",\"format\":\"json\"}}]"
+            );
+            if !edges.is_empty() {
+                let names: Vec<String> =
+                    edges.iter().map(|&d| format!("\"{}\"", packages[d])).collect();
+                entry.push_str(&format!(",\"dependsOn\":[{}]", names.join(",")));
+            }
+            entry.push('}');
+            entry
+        })
+        .collect();
+    format!("{{\"package\":[{}]}}", entries.join(","))
 }
 
 fn init_repo(path: &Path, default_branch: Option<&str>) -> Result<Repository> {
@@ -698,5 +754,50 @@ mod tests {
         let head = repo.head().unwrap().peel_to_commit().unwrap();
         // The merge commit at HEAD should have 2 parents
         assert_eq!(head.parent_count(), 2);
+    }
+
+    #[test]
+    fn dependency_edges_form_a_dag() {
+        let core_count = 3;
+        let mut rng = Rng::new(20250714).unwrap();
+        let deps = build_dependency_edges(12, core_count, &mut rng);
+
+        assert_eq!(deps.len(), 12);
+        assert!(deps[0].is_empty());
+        assert_eq!(deps[1], vec![0]);
+        assert_eq!(deps[2], vec![1]);
+        for (i, edges) in deps.iter().enumerate().skip(core_count) {
+            assert!(!edges.is_empty(), "leaf {i} has no dependencies");
+            for &d in edges {
+                assert!(d < core_count, "leaf {i} depends on non-core {d}");
+                assert_ne!(d, i, "leaf {i} depends on itself");
+            }
+        }
+
+        let mut rng2 = Rng::new(20250714).unwrap();
+        assert_eq!(deps, build_dependency_edges(12, core_count, &mut rng2));
+    }
+
+    #[test]
+    fn graph_mode_writes_depends_on_config() {
+        let tmp = TempDir::new().unwrap();
+        let def_dir = TempDir::new().unwrap();
+        let def_path = write_def(
+            def_dir.path(),
+            "graph",
+            r#"{"meta":{"name":"graph","description":"d"},"generate":{"packages":10,"commits":5,"seed":7,"graph":true}}"#,
+        );
+
+        let out = tmp.path().join("graph");
+        generate_fixture(&def_path, &out, false).unwrap();
+
+        let config = fs::read_to_string(out.join("ferrflow.json")).unwrap();
+        assert!(
+            config.contains("\"dependsOn\""),
+            "config lacks edges: {config}"
+        );
+        assert!(config.contains("pkg-001"));
+        assert!(config.contains("pkg-010"));
+        assert!(out.join("packages/pkg-001/package.json").exists());
     }
 }
