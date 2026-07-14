@@ -288,7 +288,7 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path, verbose: bool) -> Result<(
 
         let mut parent = oid;
         for i in 1..=commit_count {
-            let idx = if gen.graph && rng.usize(10) < 4 {
+            let idx = if gen.graph {
                 rng.usize(core_count)
             } else {
                 rng.usize(pkg_count)
@@ -367,7 +367,9 @@ fn build_dependency_edges(pkg_count: usize, core_count: usize, rng: &mut Rng) ->
 }
 
 /// Render a ferrflow config wiring each package to its package.json and emitting
-/// `dependsOn` edges for packages that have dependencies.
+/// `dependsOn` edges for packages that have dependencies. `recoverMissedReleases`
+/// is on so that every package with commits since its tag is considered (not just
+/// the one touched by HEAD), which is what lets the dependency cascade fire.
 fn graph_config(packages: &[String], deps: &[Vec<usize>]) -> String {
     let entries: Vec<String> = packages
         .iter()
@@ -385,7 +387,10 @@ fn graph_config(packages: &[String], deps: &[Vec<usize>]) -> String {
             entry
         })
         .collect();
-    format!("{{\"package\":[{}]}}", entries.join(","))
+    format!(
+        "{{\"workspace\":{{\"recoverMissedReleases\":true}},\"package\":[{}]}}",
+        entries.join(",")
+    )
 }
 
 fn init_repo(path: &Path, default_branch: Option<&str>) -> Result<Repository> {
@@ -796,6 +801,7 @@ mod tests {
             config.contains("\"dependsOn\""),
             "config lacks edges: {config}"
         );
+        assert!(config.contains("\"recoverMissedReleases\":true"));
         assert!(config.contains("pkg-001"));
         assert!(config.contains("pkg-010"));
         assert!(out.join("packages/pkg-001/package.json").exists());
