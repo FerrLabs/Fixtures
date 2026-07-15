@@ -27,16 +27,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout caller repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Generate fixtures
         id: fixtures
-        uses: FerrLabs/Fixtures@v0
+        uses: FerrLabs/Fixtures@7c4919f7db721c94fe8a91558a86759f4b63b004 # v1
         with:
           definitions: ${{ inputs.definitions }}
 
       - name: Checkout FerrFlow
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           repository: FerrLabs/FerrFlow
           ref: ${{ inputs.ferrflow-ref }}
@@ -44,7 +44,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@nightly
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: __ferrflow__/target
           key: ferrflow-${{ runner.os }}-${{ inputs.ferrflow-ref }}-${{ hashFiles('__ferrflow__/Cargo.lock') }}
@@ -61,7 +61,7 @@ jobs:
 
       - name: Upload test output on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: fixture-test-output
           path: ${{ steps.fixtures.outputs.generated-path }}
