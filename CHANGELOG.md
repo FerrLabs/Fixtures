@@ -4,6 +4,13 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.0] - 2026-07-17
+
+### Features
+
+- feat(generator): repack and write the commit-graph after generation (#144)
+- feat(ci): dispatch Renovate when the rebase box is ticked (#142)
+
 ## [1.0.2] - 2026-04-23
 
 ### Bug Fixes
