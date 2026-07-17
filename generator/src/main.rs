@@ -27,6 +27,7 @@ fn main() -> Result<()> {
             defs_dir,
             gen_dir,
             verbose,
+            pack,
         } => {
             if !defs_dir.exists() {
                 anyhow::bail!("{} not found.", defs_dir.display());
@@ -57,7 +58,7 @@ fn main() -> Result<()> {
                 let path = entry.path();
                 let name = path.file_stem().unwrap().to_string_lossy().to_string();
                 let start = std::time::Instant::now();
-                match generate::generate_fixture(&path, &gen_dir.join(&name), verbose) {
+                match generate::generate_fixture(&path, &gen_dir.join(&name), verbose, pack) {
                     Ok(()) => {
                         if verbose {
                             let elapsed = start.elapsed();
