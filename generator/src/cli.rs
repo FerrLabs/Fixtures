@@ -7,6 +7,7 @@ pub enum Mode {
         defs_dir: PathBuf,
         gen_dir: PathBuf,
         verbose: bool,
+        pack: bool,
     },
     Validate {
         defs_dir: PathBuf,
@@ -18,6 +19,7 @@ pub fn parse_args(args: &[String]) -> Result<Mode> {
     let mut gen_dir = PathBuf::from("fixtures/generated");
     let mut validate = false;
     let mut verbose = false;
+    let mut pack = true;
 
     let mut i = 1;
     while i < args.len() {
@@ -44,6 +46,9 @@ pub fn parse_args(args: &[String]) -> Result<Mode> {
             "--verbose" | "-v" => {
                 verbose = true;
             }
+            "--no-pack" => {
+                pack = false;
+            }
             other => anyhow::bail!("unknown argument: {other}\n\nRun with --help for usage."),
         }
         i += 1;
@@ -56,6 +61,7 @@ pub fn parse_args(args: &[String]) -> Result<Mode> {
             defs_dir,
             gen_dir,
             verbose,
+            pack,
         })
     }
 }
@@ -72,6 +78,8 @@ OPTIONS:
     -d, --definitions <DIR>    Path to JSON definitions directory [default: fixtures/definitions]
     -o, --output <DIR>         Output directory for generated repos [default: fixtures/generated]
         --validate             Validate definitions without generating repos
+        --no-pack              Leave generated repos loose instead of repacking
+                               and writing a commit-graph (requires no git binary)
     -v, --verbose              Print detailed output during generation
     -h, --help                 Print help information
     -V, --version              Print version",
@@ -95,6 +103,7 @@ mod tests {
                 defs_dir,
                 gen_dir,
                 verbose,
+                pack: _,
             } => {
                 assert_eq!(defs_dir, PathBuf::from("fixtures/definitions"));
                 assert_eq!(gen_dir, PathBuf::from("fixtures/generated"));
@@ -227,5 +236,23 @@ mod tests {
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("unknown argument"), "unexpected error: {msg}");
+    }
+
+    #[test]
+    fn pack_is_the_default() {
+        let mode = parse_args(&args(&["gen"])).unwrap();
+        match mode {
+            Mode::Generate { pack, .. } => assert!(pack),
+            _ => panic!("expected generate mode"),
+        }
+    }
+
+    #[test]
+    fn no_pack_flag_disables_packing() {
+        let mode = parse_args(&args(&["gen", "--no-pack"])).unwrap();
+        match mode {
+            Mode::Generate { pack, .. } => assert!(!pack),
+            _ => panic!("expected generate mode"),
+        }
     }
 }

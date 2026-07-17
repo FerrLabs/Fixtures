@@ -44,6 +44,8 @@ cd generator && cargo build --release
   --output /path/to/output
 ```
 
+Generated repos are repacked and get a commit-graph after generation, so they ship in the shape a real clone has instead of thousands of loose objects — consumers that benchmark or test against them measure a realistic object store. This shells out to `git`; pass `--no-pack` to skip it where no git binary is available (the repos then stay fully loose).
+
 ## Fixture definition format
 
 Each `.json` file describes a git repo scenario. Add `$schema` for editor autocomplete and validation:

@@ -10,7 +10,12 @@ use crate::types::{resolve_config_filename, FixtureDef, SerializableExpect};
 pub const AUTHOR_NAME: &str = "Test";
 pub const AUTHOR_EMAIL: &str = "test@test.com";
 
-pub fn generate_fixture(def_path: &Path, output_dir: &Path, verbose: bool) -> Result<()> {
+pub fn generate_fixture(
+    def_path: &Path,
+    output_dir: &Path,
+    verbose: bool,
+    pack: bool,
+) -> Result<()> {
     let content =
         fs::read_to_string(def_path).with_context(|| format!("reading {}", def_path.display()))?;
     let def: FixtureDef = serde_json::from_str(&content)
@@ -33,10 +38,51 @@ pub fn generate_fixture(def_path: &Path, output_dir: &Path, verbose: bool) -> Re
     }
 
     if def.generate.is_some() {
-        generate_bulk(&def, output_dir, verbose)
+        generate_bulk(&def, output_dir, verbose)?;
     } else {
-        generate_explicit(&def, output_dir, verbose)
+        generate_explicit(&def, output_dir, verbose)?;
     }
+
+    if pack {
+        pack_repo(output_dir)?;
+    }
+    Ok(())
+}
+
+// Committing object-by-object through libgit2 leaves the repo fully loose —
+// mono-large ships 40k loose objects and no commit-graph, a shape a real
+// checkout can never have (a clone transfers a pack by definition). Consumers
+// then benchmark and test against a worst case no user hits. Repack + write
+// the commit-graph so the fixture leaves here clone-shaped. libgit2 can build
+// neither a full pack nor a commit-graph, hence the shell-out; failure is a
+// hard error rather than a silent fall-through to the loose shape — pass
+// --no-pack to opt out where git is unavailable.
+fn pack_repo(dir: &Path) -> Result<()> {
+    let run = |args: &[&str]| -> Result<()> {
+        let out = std::process::Command::new("git")
+            .arg("-C")
+            .arg(dir)
+            .args(args)
+            .output()
+            .with_context(|| {
+                format!(
+                    "spawning git to pack {} — install git or pass --no-pack",
+                    dir.display()
+                )
+            })?;
+        if !out.status.success() {
+            anyhow::bail!(
+                "git {} failed in {}: {}",
+                args.join(" "),
+                dir.display(),
+                String::from_utf8_lossy(&out.stderr).trim()
+            );
+        }
+        Ok(())
+    };
+    run(&["repack", "-a", "-d", "-q"])?;
+    run(&["commit-graph", "write", "--reachable"])?;
+    Ok(())
 }
 
 /// Generate a fixture from explicit [[commits]] definitions.
@@ -484,6 +530,20 @@ mod tests {
         path
     }
 
+    fn loose_object_count(repo_dir: &Path) -> usize {
+        let objects = repo_dir.join(".git").join("objects");
+        fs::read_dir(&objects)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| {
+                let name = e.file_name();
+                let name = name.to_string_lossy();
+                name.len() == 2 && name.chars().all(|c| c.is_ascii_hexdigit())
+            })
+            .map(|d| fs::read_dir(d.path()).unwrap().count())
+            .sum()
+    }
+
     fn count_commits(repo: &Repository) -> usize {
         let mut revwalk = repo.revwalk().unwrap();
         revwalk.push_head().unwrap();
@@ -514,7 +574,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let repo = Repository::open(&out).unwrap();
         assert!(repo.head().is_ok());
@@ -531,7 +591,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let repo = Repository::open(&out).unwrap();
         // 3 explicit commits + 1 initial setup = 4
@@ -549,7 +609,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let repo = Repository::open(&out).unwrap();
         let tags = get_tags(&repo);
@@ -568,7 +628,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let config_path = out.join("ferrflow.json");
         assert!(config_path.exists());
@@ -587,7 +647,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         assert!(out.join(".ferrflow.toml").exists());
     }
@@ -603,7 +663,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let expect_path = out.join(".expect.toml");
         assert!(expect_path.exists());
@@ -624,7 +684,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let hook_path = out.join("hooks/pre-bump.sh");
         assert!(hook_path.exists());
@@ -643,7 +703,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let repo = Repository::open(&out).unwrap();
         let branch = repo.find_branch("develop", git2::BranchType::Local);
@@ -661,7 +721,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let repo = Repository::open(&out).unwrap();
         let head = repo.head().unwrap().peel_to_commit().unwrap();
@@ -680,7 +740,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let repo = Repository::open(&out).unwrap();
         // 10 commits + 1 initial = 11
@@ -701,7 +761,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let repo = Repository::open(&out).unwrap();
         // 5 commits + 1 initial = 6
@@ -724,7 +784,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let repo = Repository::open(&out).unwrap();
         let head = repo.head().unwrap();
@@ -738,7 +798,7 @@ mod tests {
         let def_path = write_def(def_dir.path(), "bad", "not json");
 
         let out = tmp.path().join("bad");
-        let result = generate_fixture(&def_path, &out, false);
+        let result = generate_fixture(&def_path, &out, false, false);
         assert!(result.is_err());
     }
 
@@ -753,7 +813,7 @@ mod tests {
         );
 
         let out = tmp.path().join("test");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let repo = Repository::open(&out).unwrap();
         let head = repo.head().unwrap().peel_to_commit().unwrap();
@@ -794,7 +854,7 @@ mod tests {
         );
 
         let out = tmp.path().join("graph");
-        generate_fixture(&def_path, &out, false).unwrap();
+        generate_fixture(&def_path, &out, false, false).unwrap();
 
         let config = fs::read_to_string(out.join("ferrflow.json")).unwrap();
         assert!(
@@ -805,5 +865,50 @@ mod tests {
         assert!(config.contains("pkg-001"));
         assert!(config.contains("pkg-010"));
         assert!(out.join("packages/pkg-001/package.json").exists());
+    }
+
+    // The reason pack exists: a fixture full of loose objects is a repo shape
+    // a real clone can never have, and consumers benchmark against it.
+    #[test]
+    fn pack_leaves_no_loose_objects_and_writes_the_commit_graph() {
+        let tmp = TempDir::new().unwrap();
+        let def_path = write_def(
+            tmp.path(),
+            "packed",
+            r#"{"meta":{"name":"packed","description":"packed","default_branch":"main"},"generate":{"packages":2,"commits":30}}"#,
+        );
+        let out = tmp.path().join("packed");
+        generate_fixture(&def_path, &out, false, true).unwrap();
+
+        assert_eq!(
+            loose_object_count(&out),
+            0,
+            "a packed fixture must ship no loose objects"
+        );
+        assert!(
+            out.join(".git")
+                .join("objects")
+                .join("info")
+                .join("commit-graph")
+                .exists(),
+            "commit-graph must be written"
+        );
+
+        let repo = Repository::open(&out).unwrap();
+        assert_eq!(count_commits(&repo), 31, "packing must not lose history");
+        assert!(!get_tags(&repo).is_empty(), "packing must not lose tags");
+    }
+
+    #[test]
+    fn no_pack_keeps_the_loose_shape() {
+        let tmp = TempDir::new().unwrap();
+        let def_path = write_def(
+            tmp.path(),
+            "loose",
+            r#"{"meta":{"name":"loose","description":"loose","default_branch":"main"},"generate":{"packages":1,"commits":5}}"#,
+        );
+        let out = tmp.path().join("loose");
+        generate_fixture(&def_path, &out, false, false).unwrap();
+        assert!(loose_object_count(&out) > 0);
     }
 }
