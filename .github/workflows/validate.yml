@@ -31,7 +31,7 @@ jobs:
 
       - name: Generate fixtures
         id: fixtures
-        uses: FerrLabs/Fixtures@7c4919f7db721c94fe8a91558a86759f4b63b004 # v1
+        uses: FerrLabs/Fixtures@7db03266c337749bef6f0d5c1e956b112b337b9c # v1
         with:
           definitions: ${{ inputs.definitions }}
 
@@ -42,7 +42,7 @@ jobs:
           ref: ${{ inputs.ferrflow-ref }}
           path: __ferrflow__
 
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@4fd1da8b0805d2d2e936788875a7d65dbd677dc2 # nightly
 
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
