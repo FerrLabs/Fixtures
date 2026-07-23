@@ -4,6 +4,12 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.1] - 2026-07-23
+
+### Bug Fixes
+
+- fix(ci): repair renovate-rebase.yml truncated by the pin sweep (#151)
+
 ## [1.2.0] - 2026-07-17
 
 ### Features
