@@ -27,16 +27,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout caller repo
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Generate fixtures
         id: fixtures
-        uses: FerrLabs/Fixtures@dbe382d75ee6631dd87f937d7d29358b1c58c73e # v1
+        uses: FerrLabs/Fixtures@1a96407b500631870c766cbe117555db19167dc9 # v1
         with:
           definitions: ${{ inputs.definitions }}
 
       - name: Checkout FerrFlow
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: FerrLabs/FerrFlow
           ref: ${{ inputs.ferrflow-ref }}
