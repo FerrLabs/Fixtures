@@ -6,7 +6,7 @@ on:
 
 jobs:
   dispatch:
-    uses: FerrLabs/.github/.github/workflows/reusable-renovate-dispatch.yml@599d205b85ee76521e92d33859e022e36154544f # main
+    uses: FerrLabs/.github/.github/workflows/reusable-renovate-dispatch.yml@d3ce80b43af8b567b503ab4c3ee44d6e33c246f5 # main
     with:
       runner: ubuntu-latest
     secrets: inherit
