@@ -1,10 +1,21 @@
+<div align="center">
+
 # FerrFlow Fixtures
 
+**Declarative git repositories, generated from JSON.**
+
+Describe the commits, branches and tags you want; get a real repo on disk.<br />
+Used by FerrFlow for integration tests and by Benchmarks for performance runs.
+
+[![Validate](https://github.com/FerrLabs/Fixtures/actions/workflows/validate.yml/badge.svg)](https://github.com/FerrLabs/Fixtures/actions/workflows/validate.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/FerrLabs/Fixtures/badge)](https://scorecard.dev/viewer/?uri=github.com/FerrLabs/Fixtures)
 
-Reusable GitHub Action and CLI tool for generating git fixture repos from declarative JSON definitions. Used by [FerrFlow](https://github.com/FerrLabs/FerrFlow) for integration tests and [Benchmarks](https://github.com/FerrLabs/Benchmarks) for performance testing.
+[FerrFlow](https://github.com/FerrLabs/FerrFlow) | [Benchmarks](https://github.com/FerrLabs/Benchmarks)
 
-Fixtures is a pure generator — it builds repos from JSON definitions but does not run any tests. Each consumer repo (FerrFlow, Benchmarks, etc.) owns its own definitions and test runner.
+</div>
+
+Fixtures is a pure generator. It builds repos from JSON definitions and runs no tests of its own,
+so each consumer owns its definitions and its test runner.
 
 ## Usage as GitHub Action
 
@@ -44,7 +55,7 @@ cd generator && cargo build --release
   --output /path/to/output
 ```
 
-Generated repos are repacked and get a commit-graph after generation, so they ship in the shape a real clone has instead of thousands of loose objects — consumers that benchmark or test against them measure a realistic object store. This shells out to `git`; pass `--no-pack` to skip it where no git binary is available (the repos then stay fully loose).
+Generated repos are repacked and get a commit-graph after generation, so they ship in the shape a real clone has instead of thousands of loose objects, so consumers that benchmark or test against them measure a realistic object store. This shells out to `git`; pass `--no-pack` to skip it where no git binary is available (the repos then stay fully loose).
 
 ## Fixture definition format
 
