@@ -9,9 +9,15 @@ on:
   pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened, edited, reopened, synchronize]
 
+# Obligatoire : un workflow appelé ne peut que restreindre ce que l'appelant lui
+# donne. Sans ce bloc, le run finit en `startup_failure` et ne produit aucun
+# check run.
+permissions:
+  pull-requests: read
+
 jobs:
   title:
     name: PR title
-    uses: FerrLabs/.github/.github/workflows/reusable-pr-title.yml@c0bc74da89ab88a5a5f138d94d8ac105536b2f5e # main
+    uses: FerrLabs/.github/.github/workflows/reusable-pr-title.yml@64d3151ca65e6ec163a32db9497e66b1381fd20f # main
     with:
       runner: ubuntu-latest
