@@ -1,0 +1,12 @@
+name: PR title probe
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  title:
+    name: PR title
+    uses: FerrLabs/.github/.github/workflows/reusable-pr-title.yml@f960ed3bbd48ad67062af348d864cd60f4da2f6e
+    with:
+      runner: ubuntu-latest
