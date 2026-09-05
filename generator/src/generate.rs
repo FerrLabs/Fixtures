@@ -59,7 +59,23 @@ pub fn generate_fixture(
 // --no-pack to opt out where git is unavailable.
 fn pack_repo(dir: &Path) -> Result<()> {
     let run = |args: &[&str]| -> Result<()> {
-        let out = std::process::Command::new("git")
+        let mut cmd = std::process::Command::new("git");
+        // `-C` moves the working directory, but GIT_DIR and friends outrank it
+        // when git locates the repository. Anything running this binary from a
+        // git hook, or from a script that has already set them, would otherwise
+        // pack the caller's repository instead of the fixture.
+        for var in [
+            "GIT_DIR",
+            "GIT_WORK_TREE",
+            "GIT_INDEX_FILE",
+            "GIT_OBJECT_DIRECTORY",
+            "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+            "GIT_COMMON_DIR",
+            "GIT_NAMESPACE",
+        ] {
+            cmd.env_remove(var);
+        }
+        let out = cmd
             .arg("-C")
             .arg(dir)
             .args(args)
