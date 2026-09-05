@@ -38,10 +38,20 @@ fn packing_ignores_an_inherited_git_dir() {
         Command::new("git")
             .args(["init", "-q"])
             .current_dir(&decoy)
+            // Without this the decoy is never built: `git init` honours an
+            // ambient GIT_DIR over the working directory, so under a hook it
+            // would reinitialise the repository being pushed instead.
+            .env_remove("GIT_DIR")
+            .env_remove("GIT_WORK_TREE")
+            .env_remove("GIT_INDEX_FILE")
             .status()
             .unwrap()
             .success(),
         "could not create the decoy repository"
+    );
+    assert!(
+        decoy.join(".git").is_dir(),
+        "the decoy was not built, so GIT_DIR captured the init"
     );
 
     let out = tmp.path().join("out");

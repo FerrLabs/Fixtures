@@ -71,6 +71,7 @@ fn pack_repo(dir: &Path) -> Result<()> {
             "GIT_OBJECT_DIRECTORY",
             "GIT_ALTERNATE_OBJECT_DIRECTORIES",
             "GIT_COMMON_DIR",
+            "GIT_NAMESPACE",
         ] {
             cmd.env_remove(var);
         }
