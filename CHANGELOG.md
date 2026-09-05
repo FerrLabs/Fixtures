@@ -4,6 +4,12 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.2] - 2026-09-05
+
+### Bug Fixes
+
+- fix(generate): clear the inherited git environment before packing (#213)
+
 ## [1.2.1] - 2026-07-23
 
 ### Bug Fixes
