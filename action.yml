@@ -55,10 +55,12 @@ runs:
 
     - name: Validate definitions
       shell: bash
+      env:
+        DEFINITIONS: ${{ inputs.definitions }}
       run: |
         __fixtures__/generator/target/release/generate-fixtures \
           --validate \
-          --definitions "${{ inputs.definitions }}"
+          --definitions "$DEFINITIONS"
 
     - name: Generate fixtures
       id: generate
