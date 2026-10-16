@@ -53,6 +53,13 @@ runs:
         mkdir -p "$GEN_DIR"
         echo "gen-dir=$GEN_DIR" >> "$GITHUB_OUTPUT"
 
+    - name: Validate definitions
+      shell: bash
+      run: |
+        __fixtures__/generator/target/release/generate-fixtures \
+          --validate \
+          --definitions "${{ inputs.definitions }}"
+
     - name: Generate fixtures
       id: generate
       shell: bash
