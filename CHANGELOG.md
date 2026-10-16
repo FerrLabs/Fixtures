@@ -4,6 +4,12 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.3.0] - 2026-10-16
+
+### Features
+
+- feat(generator): support versioned_files on package definitions (#253)
+
 ## [1.2.2] - 2026-09-05
 
 ### Bug Fixes
