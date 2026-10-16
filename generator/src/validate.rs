@@ -158,6 +158,17 @@ fn validate_single(path: &Path) -> std::result::Result<Vec<String>, Vec<String>>
         }
     }
 
+    for pkg in &def.packages {
+        for file in &pkg.versioned_files {
+            if has_traversal(&file.path) {
+                errors.push(format!(
+                    "packages['{}'].versioned_files: path '{}' contains directory traversal",
+                    pkg.name, file.path
+                ));
+            }
+        }
+    }
+
     for hook in &def.hooks {
         if has_traversal(&hook.path) {
             errors.push(format!(
@@ -292,6 +303,17 @@ mod tests {
             tmp.path(),
             "traversal",
             r#"{"meta":{"name":"t","description":"d"},"hooks":[{"path":"../../etc/passwd","content":"x"}]}"#,
+        );
+        assert!(!validate_definitions(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn versioned_file_path_traversal() {
+        let tmp = TempDir::new().unwrap();
+        write_def(
+            tmp.path(),
+            "traversal",
+            r#"{"meta":{"name":"t","description":"d"},"packages":[{"name":"a","path":".","initial_version":"1.0.0","versioned_files":[{"path":"../go.mod","content":"x"}]}]}"#,
         );
         assert!(!validate_definitions(tmp.path()).unwrap());
     }

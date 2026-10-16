@@ -189,6 +189,17 @@ The `tag` field on package entries still works for tags on the initial commit.
 - `format`: `"json"` (default), `"toml"`, or `"json5"`
 - `filename`: optional, auto-derived from format if omitted
 
+#### Versioned files
+
+A package can seed extra files on the initial commit with `versioned_files`. Paths are relative to the repo root, entries without `content` are skipped, and `format` is informational. The default `version.toml` is still generated.
+
+```json
+"packages": [{
+  "name": "mymod", "path": ".", "initial_version": "1.0.0",
+  "versioned_files": [{ "path": "go.mod", "format": "gomod", "content": "module example\n" }]
+}]
+```
+
 #### Hook scripts
 
 ```json

@@ -50,6 +50,18 @@ pub struct PackageDef {
     pub initial_version: String,
     #[serde(default)]
     pub tag: Option<String>,
+    #[serde(default)]
+    pub versioned_files: Vec<VersionedFileDef>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct VersionedFileDef {
+    pub path: String,
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub format: Option<String>,
+    #[serde(default)]
+    pub content: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

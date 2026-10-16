@@ -136,6 +136,16 @@ fn generate_explicit(def: &FixtureDef, output_dir: &Path, verbose: bool) -> Resu
                 pkg.name, pkg.initial_version
             ),
         )?;
+
+        for file in &pkg.versioned_files {
+            if let Some(content) = &file.content {
+                let file_path = output_dir.join(&file.path);
+                if let Some(parent) = file_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(&file_path, content)?;
+            }
+        }
     }
 
     for hook in &def.hooks {

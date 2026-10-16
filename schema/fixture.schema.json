@@ -76,6 +76,29 @@
           "tag": {
             "type": "string",
             "description": "Tag to create on the initial setup commit for this package."
+          },
+          "versioned_files": {
+            "type": "array",
+            "description": "Extra files to seed on the initial setup commit, written relative to the repo root. The default version.toml is still generated.",
+            "items": {
+              "type": "object",
+              "required": ["path"],
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Relative path of the file from the repo root."
+                },
+                "format": {
+                  "type": "string",
+                  "description": "Format name matching the consumer's config. Informational only."
+                },
+                "content": {
+                  "type": "string",
+                  "description": "File content. Entries without content are not written."
+                }
+              }
+            }
           }
         }
       }
