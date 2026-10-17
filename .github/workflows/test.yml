@@ -38,6 +38,9 @@ jobs:
         working-directory: generator
         run: cargo build --release
 
+      - name: Validate example definitions
+        run: ./generator/target/release/generate-fixtures --validate --definitions fixtures/examples
+
       - name: Generate example fixtures
         run: |
           ./generator/target/release/generate-fixtures \
