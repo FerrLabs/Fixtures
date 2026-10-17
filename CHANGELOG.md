@@ -4,6 +4,12 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.4.0] - 2026-10-17
+
+### Features
+
+- feat(action): validate definitions before generating (#252)
+
 ## [1.3.0] - 2026-10-16
 
 ### Features
