@@ -159,6 +159,12 @@ fn validate_single(path: &Path) -> std::result::Result<Vec<String>, Vec<String>>
     }
 
     for pkg in &def.packages {
+        if has_traversal(&pkg.path) {
+            errors.push(format!(
+                "packages['{}']: path '{}' contains directory traversal",
+                pkg.name, pkg.path
+            ));
+        }
         for file in &pkg.versioned_files {
             if has_traversal(&file.path) {
                 errors.push(format!(
@@ -316,6 +322,39 @@ mod tests {
             r#"{"meta":{"name":"t","description":"d"},"packages":[{"name":"a","path":".","initial_version":"1.0.0","versioned_files":[{"path":"../go.mod","content":"x"}]}]}"#,
         );
         assert!(!validate_definitions(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn package_path_traversal() {
+        let tmp = TempDir::new().unwrap();
+        write_def(
+            tmp.path(),
+            "traversal",
+            r#"{"meta":{"name":"t","description":"d"},"packages":[{"name":"a","path":"../outside","initial_version":"1.0.0"}]}"#,
+        );
+        assert!(!validate_definitions(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn package_path_absolute() {
+        let tmp = TempDir::new().unwrap();
+        write_def(
+            tmp.path(),
+            "absolute",
+            r#"{"meta":{"name":"t","description":"d"},"packages":[{"name":"a","path":"/etc","initial_version":"1.0.0"}]}"#,
+        );
+        assert!(!validate_definitions(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn package_path_nested_ok() {
+        let tmp = TempDir::new().unwrap();
+        write_def(
+            tmp.path(),
+            "ok",
+            r#"{"meta":{"name":"t","description":"d"},"packages":[{"name":"a","path":"packages/a","initial_version":"1.0.0"},{"name":"b","path":".","initial_version":"1.0.0"}]}"#,
+        );
+        assert!(validate_definitions(tmp.path()).unwrap());
     }
 
     #[test]
