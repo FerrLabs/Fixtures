@@ -54,10 +54,13 @@ jobs:
         run: cargo build --release
 
       - name: Run fixture tests
+        env:
+          TEST_SCRIPT: ${{ inputs.test-script }}
+          GENERATED_PATH: ${{ steps.fixtures.outputs.generated-path }}
         run: |
-          chmod +x "${{ inputs.test-script }}"
+          chmod +x "$TEST_SCRIPT"
           FERRFLOW_BIN="$PWD/__ferrflow__/target/release/ferrflow" \
-            bash "${{ inputs.test-script }}" "${{ steps.fixtures.outputs.generated-path }}"
+            bash "$TEST_SCRIPT" "$GENERATED_PATH"
 
       - name: Upload test output on failure
         if: failure()

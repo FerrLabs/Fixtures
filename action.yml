@@ -45,8 +45,10 @@ runs:
     - name: Prepare output directory
       id: prepare
       shell: bash
+      env:
+        INPUT_GENERATED_DIR: ${{ inputs.generated-dir }}
       run: |
-        GEN_DIR="${{ inputs.generated-dir }}"
+        GEN_DIR="$INPUT_GENERATED_DIR"
         if [[ -z "$GEN_DIR" ]]; then
           GEN_DIR="$(mktemp -d)/generated"
         fi
@@ -65,11 +67,14 @@ runs:
     - name: Generate fixtures
       id: generate
       shell: bash
+      env:
+        DEFINITIONS: ${{ inputs.definitions }}
+        GEN_DIR: ${{ steps.prepare.outputs.gen-dir }}
       run: |
         __fixtures__/generator/target/release/generate-fixtures \
-          --definitions "${{ inputs.definitions }}" \
-          --output "${{ steps.prepare.outputs.gen-dir }}"
-        echo "generated-path=${{ steps.prepare.outputs.gen-dir }}" >> "$GITHUB_OUTPUT"
+          --definitions "$DEFINITIONS" \
+          --output "$GEN_DIR"
+        echo "generated-path=$GEN_DIR" >> "$GITHUB_OUTPUT"
 
     - name: Cleanup
       if: always()
