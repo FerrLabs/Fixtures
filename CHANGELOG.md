@@ -4,6 +4,12 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.4.1] - 2026-10-25
+
+### Bug Fixes
+
+- fix(validate): reject directory traversal in packages[].path (#263)
+
 ## [1.4.0] - 2026-10-17
 
 ### Features
