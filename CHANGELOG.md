@@ -4,6 +4,12 @@ All notable changes to `fixtures` will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.4.2] - 2026-10-31
+
+### Bug Fixes
+
+- fix(action): build the generator from the pinned action ref (#272)
+
 ## [1.4.1] - 2026-10-25
 
 ### Bug Fixes
