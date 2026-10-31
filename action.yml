@@ -22,24 +22,29 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Checkout Fixtures
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      with:
-        repository: FerrLabs/Fixtures
-        path: __fixtures__
+    - name: Hash generator sources
+      id: hash
+      shell: bash
+      env:
+        GENERATOR_DIR: ${{ github.action_path }}/generator
+      run: |
+        HASH="$(cd "$GENERATOR_DIR" && find Cargo.toml Cargo.lock src -type f | sort | xargs sha256sum | sha256sum | cut -d' ' -f1)"
+        echo "hash=$HASH" >> "$GITHUB_OUTPUT"
 
     - name: Cache generator build
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
-        path: __fixtures__/generator/target
-        key: fixtures-generator-${{ runner.os }}-${{ hashFiles('__fixtures__/generator/Cargo.lock', '__fixtures__/generator/Cargo.toml', '__fixtures__/generator/src/**') }}
+        path: ${{ runner.temp }}/fixtures-target
+        key: fixtures-generator-${{ runner.os }}-${{ steps.hash.outputs.hash }}
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
 
     - name: Build generator
       shell: bash
-      working-directory: __fixtures__/generator
+      working-directory: ${{ github.action_path }}/generator
+      env:
+        CARGO_TARGET_DIR: ${{ runner.temp }}/fixtures-target
       run: cargo build --release
 
     - name: Prepare output directory
@@ -59,8 +64,9 @@ runs:
       shell: bash
       env:
         DEFINITIONS: ${{ inputs.definitions }}
+        GENERATOR: ${{ runner.temp }}/fixtures-target/release/generate-fixtures
       run: |
-        __fixtures__/generator/target/release/generate-fixtures \
+        "$GENERATOR" \
           --validate \
           --definitions "$DEFINITIONS"
 
@@ -69,14 +75,10 @@ runs:
       shell: bash
       env:
         DEFINITIONS: ${{ inputs.definitions }}
+        GENERATOR: ${{ runner.temp }}/fixtures-target/release/generate-fixtures
         GEN_DIR: ${{ steps.prepare.outputs.gen-dir }}
       run: |
-        __fixtures__/generator/target/release/generate-fixtures \
+        "$GENERATOR" \
           --definitions "$DEFINITIONS" \
           --output "$GEN_DIR"
         echo "generated-path=$GEN_DIR" >> "$GITHUB_OUTPUT"
-
-    - name: Cleanup
-      if: always()
-      shell: bash
-      run: rm -rf __fixtures__
