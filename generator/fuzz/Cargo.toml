@@ -1,0 +1,30 @@
+[package]
+name = "generate-fixtures-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+generate-fixtures = { path = ".." }
+serde_json = "1"
+
+[workspace]
+
+[[bin]]
+name = "validate_definition"
+path = "fuzz_targets/validate_definition.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "dependency_edges"
+path = "fuzz_targets/dependency_edges.rs"
+test = false
+doc = false
+bench = false

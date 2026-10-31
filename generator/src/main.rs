@@ -1,11 +1,7 @@
 mod cli;
-mod generate;
-mod rng;
-mod tree;
-mod types;
-mod validate;
 
 use anyhow::Result;
+use generate_fixtures::{generate, validate};
 use rayon::prelude::*;
 use std::fs;
 use std::sync::atomic::{AtomicUsize, Ordering};
