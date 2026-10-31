@@ -1,18 +1,9 @@
 #![no_main]
-#![allow(dead_code)]
-
-#[path = "../../src/generate.rs"]
-mod generate;
-#[path = "../../src/rng.rs"]
-mod rng;
-#[path = "../../src/tree.rs"]
-mod tree;
-#[path = "../../src/types.rs"]
-mod types;
 
 use arbitrary::Arbitrary;
+use generate_fixtures::generate;
+use generate_fixtures::rng::Rng;
 use libfuzzer_sys::fuzz_target;
-use rng::Rng;
 
 #[derive(Arbitrary, Debug)]
 struct Input {

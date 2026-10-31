@@ -45,12 +45,15 @@ fn has_traversal(path: &str) -> bool {
     std::path::Path::new(path).is_absolute() || path.split(['/', '\\']).any(|c| c == "..")
 }
 
-pub(crate) fn validate_single(path: &Path) -> std::result::Result<Vec<String>, Vec<String>> {
+fn validate_single(path: &Path) -> std::result::Result<Vec<String>, Vec<String>> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("reading {}", path.display()))
         .map_err(|e| vec![e.to_string()])?;
+    validate_str(&content)
+}
 
-    let def: FixtureDef = serde_json::from_str(&content)
+pub fn validate_str(content: &str) -> std::result::Result<Vec<String>, Vec<String>> {
+    let def: FixtureDef = serde_json::from_str(content)
         .with_context(|| "invalid JSON or missing required fields")
         .map_err(|e| vec![e.to_string()])?;
 

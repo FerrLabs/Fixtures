@@ -1,20 +1,9 @@
 #![no_main]
-#![allow(dead_code)]
 
-#[path = "../../src/generate.rs"]
-mod generate;
-#[path = "../../src/rng.rs"]
-mod rng;
-#[path = "../../src/tree.rs"]
-mod tree;
-#[path = "../../src/types.rs"]
-mod types;
-#[path = "../../src/validate.rs"]
-mod validate;
-
+use generate_fixtures::types::{CommitDef, FixtureDef};
+use generate_fixtures::validate;
 use libfuzzer_sys::fuzz_target;
-use std::path::{Component, Path, PathBuf};
-use types::{CommitDef, FixtureDef};
+use std::path::{Component, Path};
 
 fn stays_inside_root(path: &str) -> bool {
     Path::new(path)
@@ -41,16 +30,13 @@ fn written_paths(def: &FixtureDef) -> Vec<&str> {
     paths
 }
 
-fn scratch_file() -> PathBuf {
-    std::env::temp_dir().join(format!("validate-definition-{}.json", std::process::id()))
-}
-
 fuzz_target!(|data: &[u8]| {
-    let file = scratch_file();
-    std::fs::write(&file, data).unwrap();
-
-    if validate::validate_single(&file).is_ok() {
-        let def: FixtureDef = serde_json::from_slice(data).expect("accepted definition must parse");
+    let Ok(content) = std::str::from_utf8(data) else {
+        return;
+    };
+    if validate::validate_str(content).is_ok() {
+        let def: FixtureDef =
+            serde_json::from_str(content).expect("accepted definition must parse");
         for path in written_paths(&def) {
             assert!(stays_inside_root(path), "accepted escaping path {path:?}");
         }

@@ -421,7 +421,7 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path, verbose: bool) -> Result<(
 /// spine (each depends on the previous), and every remaining leaf depends on 1-3
 /// core packages. Deterministic for a given `rng`. Returns per-package dependency
 /// indices into the package list.
-pub(crate) fn build_dependency_edges(
+pub fn build_dependency_edges(
     pkg_count: usize,
     core_count: usize,
     rng: &mut Rng,
