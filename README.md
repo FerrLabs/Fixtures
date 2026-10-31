@@ -1,13 +1,15 @@
 <div align="center">
 
-# FerrFlow Fixtures
+<h1><img src=".github/logo.svg" alt="" width="48" height="48" align="absmiddle"> FerrFlow Fixtures</h1>
 
 **Declarative git repositories, generated from JSON.**
 
 Describe the commits, branches and tags you want; get a real repo on disk.<br />
 Used by FerrFlow for integration tests and by Benchmarks for performance runs.
 
-[![Validate](https://github.com/FerrLabs/Fixtures/actions/workflows/validate.yml/badge.svg)](https://github.com/FerrLabs/Fixtures/actions/workflows/validate.yml)
+[![Latest release](https://img.shields.io/github/v/release/FerrLabs/Fixtures)](https://github.com/FerrLabs/Fixtures/releases/latest)
+[![CI](https://github.com/FerrLabs/Fixtures/actions/workflows/test.yml/badge.svg)](https://github.com/FerrLabs/Fixtures/actions/workflows/test.yml)
+[![License](https://img.shields.io/github/license/FerrLabs/Fixtures)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/FerrLabs/Fixtures/badge)](https://scorecard.dev/viewer/?uri=github.com/FerrLabs/Fixtures)
 
 [FerrFlow](https://github.com/FerrLabs/FerrFlow) | [Benchmarks](https://github.com/FerrLabs/Benchmarks)
@@ -279,6 +281,7 @@ Create branches from specific points and optionally merge them back:
 │   ├── Cargo.toml
 │   └── src/
 │       ├── main.rs            # Entry point
+│       ├── lib.rs             # Library crate root
 │       ├── cli.rs             # Argument parsing (--help, --version, etc.)
 │       ├── generate.rs        # Fixture generation logic
 │       ├── types.rs            # Definition structs and deserialization
