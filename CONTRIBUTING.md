@@ -7,3 +7,7 @@ Run `./.githooks/install.sh` once after cloning to enable pre-commit / pre-push 
 The hooks run from `.githooks/` (set via `core.hooksPath`):
 - `pre-commit` — runs `cargo fmt --check` and `cargo clippy -D warnings` on commits touching Rust files.
 - `pre-push` — runs `cargo test --all-features` from `generator/`.
+
+## Fuzzing
+
+Targets live in `generator/fuzz/`. Run one from `generator/` with `cargo +nightly fuzz run <target>`. CI runs them nightly.

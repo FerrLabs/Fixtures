@@ -45,7 +45,7 @@ fn has_traversal(path: &str) -> bool {
     std::path::Path::new(path).is_absolute() || path.split(['/', '\\']).any(|c| c == "..")
 }
 
-fn validate_single(path: &Path) -> std::result::Result<Vec<String>, Vec<String>> {
+pub(crate) fn validate_single(path: &Path) -> std::result::Result<Vec<String>, Vec<String>> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("reading {}", path.display()))
         .map_err(|e| vec![e.to_string()])?;

@@ -421,7 +421,11 @@ fn generate_bulk(def: &FixtureDef, output_dir: &Path, verbose: bool) -> Result<(
 /// spine (each depends on the previous), and every remaining leaf depends on 1-3
 /// core packages. Deterministic for a given `rng`. Returns per-package dependency
 /// indices into the package list.
-fn build_dependency_edges(pkg_count: usize, core_count: usize, rng: &mut Rng) -> Vec<Vec<usize>> {
+pub(crate) fn build_dependency_edges(
+    pkg_count: usize,
+    core_count: usize,
+    rng: &mut Rng,
+) -> Vec<Vec<usize>> {
     let mut deps = vec![Vec::new(); pkg_count];
     for (i, edges) in deps.iter_mut().enumerate().take(core_count).skip(1) {
         edges.push(i - 1);
