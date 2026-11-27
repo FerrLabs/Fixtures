@@ -11,3 +11,7 @@ The hooks run from `.githooks/` (set via `core.hooksPath`):
 ## Fuzzing
 
 Targets live in `generator/fuzz/`. Run one from `generator/` with `cargo +nightly fuzz run <target>`. CI runs them nightly.
+
+## Contributor License Agreement
+
+Contributions are covered by the [CLA](https://github.com/FerrLabs/.github/blob/main/CLA.md). Sign it once on https://cla.ferrlabs.com, using the link in the `cla` check of your first pull request.
