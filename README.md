@@ -294,8 +294,7 @@ Create branches from specific points and optionally merge them back:
 │   └── examples/              # Example definitions for reference
 └── .github/
     └── workflows/
-        ├── test.yml           # CI: fmt, clippy, test, build, generate
-        └── validate.yml       # Reusable workflow for consumer repos
+        └── test.yml           # CI: fmt, clippy, test, build, generate
 ```
 
 ## License
